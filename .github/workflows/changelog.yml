@@ -63,11 +63,3 @@ jobs:
           author_email: covalentopsbot@users.noreply.github.com
           message: ${{ steps.changelog.outputs.message }}
           push: origin develop --force
-
-  action-build:
-    needs: changelog
-    if: >-
-      ${{ (needs.changelog.outputs.action == 'true' || needs.changelog.outputs.index == 'true')
-      && needs.changelog.outputs.dist == 'false' }}
-    uses: AgnostiqHQ/covalent/.github/workflows/action_build.yml@develop
-    secrets: inherit # pragma: allowlist secret
