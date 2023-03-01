@@ -14,6 +14,11 @@ provider google {
 
 provider docker {
   host = "unix:///var/run/docker.sock"
+  registry_auth {
+    address = "https://${data.google_client_config.current.region}-docker.pkg.dev"
+    username = "oauth2accesstoken"
+    password = var.access_token
+  }
 }
 
 data google_client_config current {}
@@ -36,30 +41,17 @@ resource google_artifact_registry_repository covalent {
   format        = "DOCKER"
 }
 
-resource null_resource docker_access_token {
-  provisioner local-exec {
-    command = "export TF_VAR_access_token=$(gcloud auth print-access-token)"
-  }
-}
 
 resource docker_image base_executor {
-  depends_on = [null_resource.docker_access_token]
   name = local.executor_image_tag
   build {
     context = var.context
     build_args = {
       "PRE_RELEASE": var.prerelease
       "COVALENT_PACKAGE_VERSION": var.covalent_package_version
-
     }
     label = {
       author = "Agnostiq Inc"
-    }
-
-    auth_config {
-      host_name = "https://${data.google_client_config.current.region}-docker.pkg.dev"
-      user_name = "oauth2accesstoken"
-      password = var.access_token
     }
   }
 }
@@ -68,24 +60,6 @@ resource docker_registry_image base_executor {
   name = docker_image.base_executor.name
   keep_remotely = true
 }
-
-#resource null_resource build_image {
-#  depends_on = [null_resource.docker_login]
-#  provisioner local-exec {
-#    command = "docker build -t ${local.executor_image_tag} \
-#              --build-arg "PRE_RELEASE=${var.pre_release}" \
-#              --build-arg "COVALENT_PACKAGE_VERSION=${var.covalent_package_version}" \
-#              ${var.build_context}"
-#  }
-#}
-
-#resource null_resource upload_image {
-#  depends_on = [null_resource.build_image]
-#
-#  provisioner local-exec {
-#    command = "docker push ${local.executor_image_tag}"
-#  }
-#}
 
 # Create a storage bucket
 resource google_storage_bucket covalent {

@@ -2,14 +2,20 @@ output service_account_email {
   value = google_service_account.covalent.email
 }
 
-output service_account_member {
-  value = google_service_account.covalent.member
+output container_image_uri {
+  value = local.executor_image_tag
 }
 
-output artifact_registry_name {
-  value = google_artifact_registry_repository.covalent.name
+output storage_bucket_name {
+  value = google_storage_bucket.covalent.name
 }
 
-output artifact_registry_id {
-  value = google_artifact_registry_repository.covalent.id
+output GCPBatchExecutor {
+  value = <<EOL
+  GCPBatchExecutor(
+    storage_bucket_name='${google_storage_bucket.covalent.name}',
+    container_image_uri='${local.executor_image_tag}',
+    service_account_email='${google_service_account.covalent.email}'
+  )
+EOL
 }
