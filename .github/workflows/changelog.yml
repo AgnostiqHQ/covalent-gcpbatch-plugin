@@ -103,9 +103,9 @@
 name: changelog
 
 on: 
+  pull_request:
   push:
     branches:
-      - i-3-workflow-setup
       - develop
     paths-ignore:
       - 'CHANGELOG.md'
@@ -119,21 +119,25 @@ jobs:
       action: ${{ steps.filter.outputs.action }}
       dist: ${{ steps.filter.outputs.dist }}
       version: ${{ steps.changelog.outputs.version }}
+
     steps:
       - name: Check out head
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.COVALENT_OPS_BOT_TOKEN }}
-      - uses: dorny/paths-filter@v2
-        id: filter
-        with:
-          filters: |
-            index:
-              - 'https://github.com/AgnostiqHQ/covalent/.github/actions/changelog/index.js@develop'
-            action:
-              - 'https://github.com/AgnostiqHQ/covalent/.github/actions/changelog/action.yml@develop'
-            dist:
-              - 'https://github.com/AgnostiqHQ/covalent/.github/actions/changelog/dist/**@develop'
+
+      # - uses: dorny/paths-filter@v2
+      #   id: filter
+      #   with:
+      #     filters: |
+      #       index:
+      #         - .github/actions/changelog/index.js
+      #         - 'https://github.com/AgnostiqHQ/covalent/.github/actions/changelog/index.js@develop'
+      #       action:
+      #         - 'https://github.com/AgnostiqHQ/covalent/.github/actions/changelog/action.yml@develop'
+      #       dist:
+      #         - 'https://github.com/AgnostiqHQ/covalent/.github/actions/changelog/dist/**@develop'
+
       - name: Latest tag
         id: get-latest-tag
         uses: https://github.com/AgnostiqHQ/covalent/.github/actions/describe@develop
@@ -141,14 +145,16 @@ jobs:
           token: ${{ secrets.COVALENT_OPS_BOT_TOKEN }}
           branch: develop
           stable: false
+
       - name: Update version number
         id: changelog
-        uses: ./.github/actions/changelog
+        uses: https://github.com/AgnostiqHQ/covalent/.github/actions/changelog@develop
         with:
           changelog-path: CHANGELOG.md
           version-path: VERSION
           token: ${{ secrets.COVALENT_OPS_BOT_TOKEN }}
           basehead: ${{ steps.get-latest-tag.outputs.tag }}...${{ github.sha }}
+
       - name: Commit
         if: ${{ steps.changelog.outputs.message != 'noop' }}
         uses: EndBug/add-and-commit@v9
