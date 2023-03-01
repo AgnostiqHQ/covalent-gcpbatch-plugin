@@ -82,7 +82,7 @@ jobs:
           tar xzf covalent-gcpbatch-plugin-${VERSION}.tar.gz
           diff -r covalent-gcpbatch-plugin-${VERSION}/covalent_gcpbatch_plugin/ ../covalent_gcpbatch_plugin/
           rm -rf covalent-gcpbatch-plugin-${VERSION}/
-      - name: Install Azure Batch plugin
+      - name: Install GCP Batch plugin
         run: |
           VERSION="$(cat ./VERSION)"
           pip install ./dist/covalent-gcpbatch-plugin-${VERSION}.tar.gz
