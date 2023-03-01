@@ -1,0 +1,13 @@
+sample
+__pycache__
+*.pyc
+assets/infra/.terraform
+assets/infra/*.lock.hcl
+assets/infra/*.tfstate
+assets/infra/*.tfstate.backup
+assets/infra/*.json
+assets/infra/*.plan
+*.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.plan
