@@ -105,6 +105,7 @@ name: changelog
 on: 
   push:
     branches:
+      - i-3-workflow-setup
       - develop
     paths-ignore:
       - 'CHANGELOG.md'
