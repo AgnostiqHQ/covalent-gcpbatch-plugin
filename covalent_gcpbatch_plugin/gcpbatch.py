@@ -19,5 +19,7 @@
 # Relief from the License may be granted by purchasing a commercial license.
 
 
+EXECUTOR_PLUGIN_NAME = "GCPBatchExecutor"
+
 class GCPBatchExecutor:
     pass
