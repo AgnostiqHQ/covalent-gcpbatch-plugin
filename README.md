@@ -12,7 +12,7 @@ Covalent is a Pythonic workflow tool used to execute tasks on advanced computing
 
 ## Release Notes
 
-Release notes are available in the [Changelog](https://github.com/AgnostiqHQ/covalent-executor-template/blob/main/CHANGELOG.md).
+Release notes are available in the [Changelog](https://github.com/AgnostiqHQ/covalent-gcpbatch-plugin/blob/main/CHANGELOG.md).
 
 ## Citation
 
@@ -23,4 +23,4 @@ Please use the following citation in any publications:
 
 ## License
 
-Covalent is licensed under the GNU Affero GPL 3.0 License. Covalent may be distributed under other licenses upon request. See the [LICENSE](https://github.com/AgnostiqHQ/covalent-executor-template/blob/main/LICENSE) file or contact the [support team](mailto:support@agnostiq.ai) for more details.
+Covalent is licensed under the GNU Affero GPL 3.0 License. Covalent may be distributed under other licenses upon request. See the [LICENSE](https://github.com/AgnostiqHQ/covalent-gcpbatch-plugin/blob/main/LICENSE) file or contact the [support team](mailto:support@agnostiq.ai) for more details.

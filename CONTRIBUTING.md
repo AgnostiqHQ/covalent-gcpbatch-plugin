@@ -6,7 +6,7 @@ To get started contributing to Covalent, you should fork this repository for you
 Clone your fork locally:
 
 ```shell
-git clone https://github.com/my-github/covalent-executor-template
+git clone https://github.com/my-github/covalent-gcpbatch-plugin
 ```
 
 where `my-github` is your personal GitHub account.
