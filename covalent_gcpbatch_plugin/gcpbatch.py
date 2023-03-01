@@ -23,3 +23,6 @@ EXECUTOR_PLUGIN_NAME = "GCPBatchExecutor"
 
 class GCPBatchExecutor:
     pass
+
+def add(x, y):
+    return x + y
