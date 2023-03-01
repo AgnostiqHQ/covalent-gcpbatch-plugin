@@ -129,14 +129,14 @@ jobs:
         with:
           filters: |
             index:
-              - '.github/actions/changelog/index.js'
+              - 'https://github.com/AgnostiqHQ/covalent/.github/actions/changelog/index.js@develop'
             action:
-              - '.github/actions/changelog/action.yml'
+              - 'https://github.com/AgnostiqHQ/covalent/.github/actions/changelog/action.yml@develop'
             dist:
-              - '.github/actions/changelog/dist/**'
+              - 'https://github.com/AgnostiqHQ/covalent/.github/actions/changelog/dist/**@develop'
       - name: Latest tag
         id: get-latest-tag
-        uses: ./.github/actions/describe
+        uses: https://github.com/AgnostiqHQ/covalent/.github/actions/describe@develop
         with:
           token: ${{ secrets.COVALENT_OPS_BOT_TOKEN }}
           branch: develop
@@ -163,5 +163,5 @@ jobs:
     if: >-
       ${{ (needs.changelog.outputs.action == 'true' || needs.changelog.outputs.index == 'true')
       && needs.changelog.outputs.dist == 'false' }}
-    uses: ./.github/workflows/action_build.yml
+    uses: https://github.com/AgnostiqHQ/covalent/.github/workflows/action_build.yml@develop
     secrets: inherit # pragma: allowlist secret
