@@ -119,3 +119,4 @@ ipython_config.py
 .coverage
 
 !.github/actions/describe/dist
+node_modules/

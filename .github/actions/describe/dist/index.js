@@ -9702,8 +9702,8 @@ const run = async () => {
       ){
         console.log(`Matched latest tag: ${latestTag}`)
         latestTag = tags[i].name;
-        i++;
       } 
+      i++;
     }
     if (latestTag == null) {
       const { data: data } = await octokit.rest.repos.getCommit({
