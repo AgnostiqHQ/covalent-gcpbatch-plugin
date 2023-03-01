@@ -12,8 +12,8 @@ variable access_token {
 
 variable context {
   type = string
-  description = "Path to the build context. Defaults to the root directory up two levels"
-  default = "../.."
+  description = "Path to the build context. Defaults to the root directory up three levels"
+  default = "../../.."
 }
 
 variable prerelease {

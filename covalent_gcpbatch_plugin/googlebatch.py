@@ -1,4 +1,25 @@
+# Copyright 2023 Agnostiq Inc.
+#
+# This file is part of Covalent.
+#
+# Licensed under the GNU Affero General Public License 3.0 (the "License").
+# A copy of the License may be obtained with this software package or at
+#
+#      https://www.gnu.org/licenses/agpl-3.0.en.html
+#
+# Use of this file is prohibited except in compliance with the License. Any
+# modifications or derivative works of this file must retain this copyright
+# notice, and modified files must contain a notice indicating that they have
+# been altered from the originals.
+#
+# Covalent is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the License for more details.
+#
+# Relief from the License may be granted by purchasing a commercial license.
+
 import os
+import json
 import asyncio
 import cloudpickle as pickle
 from google.cloud import batch_v1, storage
@@ -8,11 +29,11 @@ from covalent._shared_files.config import get_config
 from typing import Callable, Dict, Optional, List, Any
 from covalent.executor.executor_plugins.remote_executor import RemoteExecutor
 
-executor_plugin_name = "GoogleBatchExecutor"
+executor_plugin_name = "GCPBatchExecutor"
 
 _EXECUTOR_PLUGIN_DEFAULTS = {
     "bucket_name": "CovalentStorageBucket",
-    "image_uri": "",
+    "container_image_uri": "",
     "service_account_email": "",
     "project_id": "",
     "region": "",
@@ -30,13 +51,13 @@ RESULT_FILENAME = "result-{dispatch_id}-{node_id}.pkl"
 EXCEPTION_FILENAME = "exception-{dispatch_id}-{node_id}.json"
 
 
-class GoogleBatchExecutor(RemoteExecutor):
+class GCPBatchExecutor(RemoteExecutor):
     """Google Batch Executor"""
 
     def __init__(
         self,
         bucket_name: Optional[str] = None,
-        image_uri: Optional[str] = None,
+        container_image_uri: Optional[str] = None,
         service_account_email: Optional[str] = None,
         project_id: Optional[str] = None,
         region: Optional[str] = None,
@@ -46,19 +67,20 @@ class GoogleBatchExecutor(RemoteExecutor):
         poll_freq: Optional[int] = 5,
         retries: Optional[int] = 1,
     ):
-        self.project_id = project_id or get_config("executor.googlebatch.project_id")
-        self.region = region or get_config("executor.googlebatch.region")
-        self.bucket_name = bucket_name or get_config("executor.googlebatch.bucket_name")
-        self.image_uri = image_uri or get_config("executor.googlebatch.image_uri")
-        self.service_account_email = service_account_email or get_config(
-            "executor.googlebatch.service_account_email"
+        self.project_id = project_id or get_config("executor.gcpbatch.project_id")
+        self.region = region or get_config("executor.gcpbatch.region")
+        self.bucket_name = bucket_name or get_config("executor.gcpbatch.bucket_name")
+        self.container_image_uri = container_image_uri or get_config(
+            "executor.gcpbatch.container_image_uri"
         )
-        self.image_uri = image_uri or get_config("executor.googlebatch.image_uri")
-        self.vcpus = vcpus or int(get_config("executor.googlebatch.vcpus"))
-        self.memory = memory or int(get_config("executor.googlebatch.memory"))
-        self.timeout = timeout or int(get_config("executor.googlebatch.timeout"))
-        self.poll_freq = poll_freq or int(get_config("executor.googlebatch.poll_freq"))
-        self.retries = retries or int(get_config("executor.googlebatch.retries"))
+        self.service_account_email = service_account_email or get_config(
+            "executor.gcpbatch.service_account_email"
+        )
+        self.vcpus = vcpus or int(get_config("executor.gcpbatch.vcpus"))
+        self.memory = memory or int(get_config("executor.gcpbatch.memory"))
+        self.timeout = timeout or int(get_config("executor.gcpbatch.timeout"))
+        self.poll_freq = poll_freq or int(get_config("executor.gcpbatch.poll_freq"))
+        self.retries = retries or int(get_config("executor.gcpbatch.retries"))
 
         super().__init__(poll_freq=self.poll_freq)
 
@@ -89,9 +111,7 @@ class GoogleBatchExecutor(RemoteExecutor):
         node_id = task_metadata["node_id"]
         local_func_filename = os.path.join(
             self.cache_dir,
-            COVALENT_TASK_FUNC_FILENAME.format(
-                dispatch_id=dispatch_id, node_id=node_id
-            ),
+            COVALENT_TASK_FUNC_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id),
         )
         self._debug_log(f"Pickling function, args, and kwargs to {local_func_filename}")
 
@@ -164,9 +184,7 @@ class GoogleBatchExecutor(RemoteExecutor):
         # Setup task's environment variables
         function_filename = os.path.join(
             MOUNT_PATH,
-            COVALENT_TASK_FUNC_FILENAME.format(
-                dispatch_id=dispatch_id, node_id=node_id
-            ),
+            COVALENT_TASK_FUNC_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id),
         )
         result_filename = os.path.join(
             MOUNT_PATH, RESULT_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
@@ -213,14 +231,10 @@ class GoogleBatchExecutor(RemoteExecutor):
     ) -> batch_v1.Job:
         """Create a batch job asynchronously"""
         loop = asyncio.get_running_loop()
-        fut = loop.run_in_executor(
-            None, self._create_batch_job_sync, image_uri, task_metadata
-        )
+        fut = loop.run_in_executor(None, self._create_batch_job_sync, image_uri, task_metadata)
         return await fut
 
-    async def _submit_job(
-        self, batch_job: batch_v1.Job, task_metadata: Dict[str, str]
-    ) -> Job:
+    async def _submit_job(self, batch_job: batch_v1.Job, task_metadata: Dict[str, str]) -> Job:
         dispatch_id = task_metadata["dispatch_id"]
         node_id = task_metadata["node_id"]
         job_name = f"job-{dispatch_id}-{node_id}"
@@ -242,40 +256,55 @@ class GoogleBatchExecutor(RemoteExecutor):
         )
         return job_description.status.State
 
-    async def run(
-        self, function: Callable, args: List, kwargs: Dict, task_metadata: Dict
-    ) -> Any:
-
+    async def run(self, function: Callable, args: List, kwargs: Dict, task_metadata: Dict) -> Any:
         dispatch_id = task_metadata["dispatch_id"]
         node_id = task_metadata["node_id"]
-
-        result_filename = RESULT_FILENAME.format(
-            dispatch_id=dispatch_id, node_id=node_id
-        )
-        exception_filename = EXCEPTION_FILENAME.format(
-            dispatch_id=dispatch_id, node_id=node_id
-        )
+valu = <<EOL
+AWSBatchExecutor(
+    region='${var.region}',
+    s3_bucket_name='${var.s3_bucket_name}',
+    batch_queue='${aws_batch_job_queue.svc.name}',
+    batch_job_role_name='${aws_iam_role.batch_job_role.name}',
+    batch_job_log_group_name='${var.log_group_name}',
+    batch_execution_role_name='${aws_iam_role.ecs_tasks_execution_role.name}',
+    vcpu=2,
+    memory=3.75,
+    time_limit=300
+)
+EOLe
+        result_filename = RESULT_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
+        exception_filename = EXCEPTION_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
 
         # Pickle the function, args and kwargs
-        local_func_filename = await self._pickle_func(
-            function, args, kwargs, task_metadata
-        )
+        local_func_filename = await self._pickle_func(function, args, kwargs, task_metadata)
 
         # Upload the pickled function, args & kwargs to storage bucket
         await self._upload_task(local_func_filename)
 
         # Create Batch job
         batch_job = await self._create_batch_job(
-            image_uri=self.image_uri, task_metadata=task_metadata
+            image_uri=self.container_image_uri, task_metadata=task_metadata
         )
 
         # Submit Batch job
         batch_job = await self._submit_job(batch_job, task_metadata)
 
         # Poll task for result or exception
-        object_key = await self._poll_task(
-            job_name, [result_filename, exception_filename]
-        )
+        object_key = await self._poll_task([result_filename, exception_filename])
+
+        if object_key == exception_filename:
+            # Download the raised exception
+            self._debug_log(
+                f"Retrieving exception raised during task exceution - {dispatch_id}:{node_id}"
+            )
+            exception = await self.query_task_exception(exception_filename)
+            raise RuntimeError(exception)
+
+        if object_key == result_filename:
+            # Download the result object
+            self._debug_log(f"Retrieving result for task - {dispatch_id}:{node_id}")
+            result_object = await self.query_result(result_filename)
+            return result_object
 
     def _get_status_sync(self, object_keys: List[str]) -> List[bool]:
         """
@@ -305,7 +334,7 @@ class GoogleBatchExecutor(RemoteExecutor):
         fut = loop.run_in_executor(None, self._get_status, object_keys)
         return await fut
 
-    async def _poll_task(self, job_name: str, object_keys: List[str]) -> None:
+    async def _poll_task(self, object_keys: List[str]) -> str:
         """
         Poll task until its result is ready
 
@@ -313,32 +342,99 @@ class GoogleBatchExecutor(RemoteExecutor):
             object_key: Name of the object to check if its present in the bucket
 
         Return(s):
-            None
+            object_key
         """
         time_left = self.time_limit
         while time_left > 0:
-            job_state = await self.get_job_state(job_name)
-            object_status = await self._get_status(object_keys)
-
-            self._debug_log(f"Job {job_name} state: {job_state}")
-            # If job succeeded and either the result object or exception file name are present in the bucket
-            if job_state == batch_v1.JobStatus.State.SUCCEEDED and any(object_status):
-                self._debug_log(f"Job succeeded")
-                break
-            await asyncio.sleep(self.poll_freq)
+            for object_key in object_keys:
+                self._debug_log(f"Polling object: {object_key}")
+                object_status = await self._get_status(object_keys)
+                if object_status:
+                    return object_key
+                await asyncio.sleep(self.poll_freq)
             time_left -= self.poll_freq
 
-        if time_left < 0:
-            raise TimeoutError(f"Job {job_name} timed out")
+        raise TimeoutError(f"{object_keys} not found in {self.bucket_name}")
 
-    async def setup(self, task_metadata: Dict):
-        return await super().setup(task_metadata)
+    def _download_blob_to_file_sync(self, bucket_name: str, blob_name: str) -> Optional[str]:
+        """
+        Download a blob from the storage bucket to local filesystem in the cache directory
 
-    async def teardown(self, task_metadata: Dict):
-        return await super().teardown(task_metadata)
+        Arg(s)
+            bucket_name: Name of the storage bucket to download the blob from
+            blob_name: Name of the blob object to download
+            download_dir: Directory to download the blob to locally
 
-    async def query_result(self) -> Any:
-        return await super().query_result()
+        Return(s)
+            None
+        """
+        local_blob_filename = os.path.join(self.cache_dir, blob_name)
+        try:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(bucket_name)
+            blob = bucket.blob(blob_name)
+            blob.download_to_filename(local_blob_filename)
+            return local_blob_filename
+        except Exception as ex:
+            self._debug_log(str(ex))
+            raise
 
-    async def submit_task(self, task_metadata: Dict) -> Any:
-        return await super().submit_task(task_metadata)
+    async def _download_blob_to_file(self, bucket_name: str, blob_name: str) -> Optional[str]:
+        """
+        Download a blob from the storage bucket to local filesystem in the cache directory asynchronously
+
+        Arg(s)
+            bucket_name: Name of the storage bucket to download the blob from
+            blob_name: Name of the blob object to download
+            download_dir: Directory to download the blob to locally
+
+        Return(s)
+            None
+        """
+        loop = asyncio.get_running_loop()
+        fut = loop.run_in_executor(None, self._download_blob_to_file_sync, bucket_name, blob_name)
+        return await fut
+
+    async def query_task_exception(self, exception_filename: str) -> Optional[str]:
+        """
+        Fetch the exception raised by the task from the storage bucket
+
+        Arg(s)
+            exception_filename: Name of the exception file to be downloaded from the storage bucket into the cache_dir
+
+        Return(s)
+            json string of the exception raised by the task
+        """
+
+        try:
+            local_exception_filename = await self._download_blob_to_file(
+                self.bucket_name, exception_filename
+            )
+            with open(local_exception_filename, "r") as f:
+                task_exception = json.load(f)
+
+            return task_exception
+        except Exception as ex:
+            self._debug_log(str(ex))
+            raise
+
+    async def query_result(self, result_filename: str) -> Any:
+        """
+        Fetch the result object from the storage bucket asynchronously
+
+        Arg(s)
+           result_filename: Name of the result filename stored in the storage bucket
+
+        Return(s)
+            Result object from the task
+        """
+        try:
+            local_result_filename = await self._download_blob_to_file(
+                self.bucket_name, result_filename
+            )
+            with open(local_result_filename, "rb") as f:
+                result_object = pickle.load(f)
+            return result_object
+        except Exception as ex:
+            self._debug_log(str(ex))
+            raise
