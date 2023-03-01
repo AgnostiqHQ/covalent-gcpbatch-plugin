@@ -82,7 +82,7 @@ jobs:
 
       - name: Transform semver version to pep440
         id: version-transform
-        uses: AgnostiqHQ/covalent/.github/actions/version-transform
+        uses: AgnostiqHQ/covalent/.github/actions/version-transform@develop
         with:
           version-path: VERSION
       
