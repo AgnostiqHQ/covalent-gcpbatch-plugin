@@ -25,9 +25,9 @@ on:
   push:
     branches:
       - develop
-    paths-ignore:
-      - 'CHANGELOG.md'
-      - 'VERSION'
+    # paths-ignore:
+    #   - 'CHANGELOG.md'
+    #   - 'VERSION'
 
 jobs:
   changelog:
@@ -40,7 +40,7 @@ jobs:
 
       - name: Latest tag
         id: get-latest-tag
-        uses: AgnostiqHQ/covalent/.github/actions/describe@develop
+        uses: ./.github/actions/describe
         with:
           token: ${{ secrets.COVALENT_OPS_BOT_TOKEN }}
           branch: develop
