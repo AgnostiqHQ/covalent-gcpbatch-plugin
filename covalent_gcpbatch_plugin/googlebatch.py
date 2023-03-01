@@ -259,19 +259,6 @@ class GCPBatchExecutor(RemoteExecutor):
     async def run(self, function: Callable, args: List, kwargs: Dict, task_metadata: Dict) -> Any:
         dispatch_id = task_metadata["dispatch_id"]
         node_id = task_metadata["node_id"]
-valu = <<EOL
-AWSBatchExecutor(
-    region='${var.region}',
-    s3_bucket_name='${var.s3_bucket_name}',
-    batch_queue='${aws_batch_job_queue.svc.name}',
-    batch_job_role_name='${aws_iam_role.batch_job_role.name}',
-    batch_job_log_group_name='${var.log_group_name}',
-    batch_execution_role_name='${aws_iam_role.ecs_tasks_execution_role.name}',
-    vcpu=2,
-    memory=3.75,
-    time_limit=300
-)
-EOLe
         result_filename = RESULT_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
         exception_filename = EXCEPTION_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
 
