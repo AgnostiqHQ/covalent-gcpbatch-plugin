@@ -140,7 +140,7 @@ jobs:
 
       - name: Latest tag
         id: get-latest-tag
-        uses: https://github.com/AgnostiqHQ/covalent/.github/actions/describe@develop
+        uses: AgnostiqHQ/covalent/.github/actions/describe@develop
         with:
           token: ${{ secrets.COVALENT_OPS_BOT_TOKEN }}
           branch: develop
@@ -148,7 +148,7 @@ jobs:
 
       - name: Update version number
         id: changelog
-        uses: https://github.com/AgnostiqHQ/covalent/.github/actions/changelog@develop
+        uses: AgnostiqHQ/covalent/.github/actions/changelog@develop
         with:
           changelog-path: CHANGELOG.md
           version-path: VERSION
@@ -169,5 +169,5 @@ jobs:
     if: >-
       ${{ (needs.changelog.outputs.action == 'true' || needs.changelog.outputs.index == 'true')
       && needs.changelog.outputs.dist == 'false' }}
-    uses: https://github.com/AgnostiqHQ/covalent/.github/workflows/action_build.yml@develop
+    uses: AgnostiqHQ/covalent/.github/workflows/action_build.yml@develop
     secrets: inherit # pragma: allowlist secret
