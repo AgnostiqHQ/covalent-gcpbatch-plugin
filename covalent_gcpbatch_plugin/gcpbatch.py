@@ -141,6 +141,9 @@ class GCPBatchExecutor(RemoteExecutor):
         )
         return await fut
 
+    def _validate_credentials(self) -> bool:
+        pass
+
     def _upload_task_sync(self, func_filename: str) -> None:
         """Upload task to the google storage bucket"""
         self._debug_log(f"Uploading {func_filename} to bucket {self.bucket_name}")
@@ -202,6 +205,14 @@ class GCPBatchExecutor(RemoteExecutor):
             }
         )
 
+        # Mount bucket
+        gcs_bucket = batch_v1.GCS()
+        gcs_bucket.remote_path = self.bucket_name
+        gcs_volume = batch_v1.Volume()
+        gcs_volume.gcs = gcs_bucket
+        gcs_volume.mount_path = MOUNT_PATH
+        task_spec.volumes = [gcs_volume]
+
         # Specify task's compute resources
         task_spec.compute_resource = batch_v1.ComputeResource(
             cpu_milli=self.vcpus * 1000, memory_mib=self.memory
@@ -234,7 +245,7 @@ class GCPBatchExecutor(RemoteExecutor):
         fut = loop.run_in_executor(None, self._create_batch_job_sync, image_uri, task_metadata)
         return await fut
 
-    async def _submit_job(self, batch_job: batch_v1.Job, task_metadata: Dict[str, str]) -> Job:
+    async def submit_task(self, task_metadata: Dict, batch_job: batch_v1.Job) -> Any:
         dispatch_id = task_metadata["dispatch_id"]
         node_id = task_metadata["node_id"]
         job_name = f"job-{dispatch_id}-{node_id}"
@@ -248,6 +259,10 @@ class GCPBatchExecutor(RemoteExecutor):
 
         return await batch_client.create_job(create_request)
 
+    async def cancel(self) -> bool:
+        pass
+
+    #    async def _submit_job(self, batch_job: batch_v1.Job, task_metadata: Dict[str, str]) -> Job:
     async def get_job_state(self, job_name: str) -> Any:
         """Get the job's state"""
         batch_client = self._get_batch_client()
@@ -266,17 +281,21 @@ class GCPBatchExecutor(RemoteExecutor):
         local_func_filename = await self._pickle_func(function, args, kwargs, task_metadata)
 
         # Upload the pickled function, args & kwargs to storage bucket
+        self._debug_log(f"Uploading {local_func_filename} to {self.bucket_name}")
         await self._upload_task(local_func_filename)
 
         # Create Batch job
+        self._debug_log(f"Creating batch job")
         batch_job = await self._create_batch_job(
             image_uri=self.container_image_uri, task_metadata=task_metadata
         )
 
         # Submit Batch job
-        batch_job = await self._submit_job(batch_job, task_metadata)
+        batch_job = await self.submit_task(task_metadata, batch_job)
+        self._debug_log(f"Submitted batch job {batch_job.uid}")
 
         # Poll task for result or exception
+        self._debug_log(f"Polling task for {result_filename} or {exception_filename}")
         object_key = await self._poll_task([result_filename, exception_filename])
 
         if object_key == exception_filename:
@@ -293,7 +312,7 @@ class GCPBatchExecutor(RemoteExecutor):
             result_object = await self.query_result(result_filename)
             return result_object
 
-    def _get_status_sync(self, object_keys: List[str]) -> List[bool]:
+    def _get_status_sync(self, object_key: str) -> bool:
         """
         Check the status of the objects in the bucket
 
@@ -305,9 +324,10 @@ class GCPBatchExecutor(RemoteExecutor):
         """
         storage_client = storage.Client()
         blobs = storage_client.list_blobs(self.bucket_name)
-        return [True if object_key in blobs else False for object_key in object_keys]
+        blob_names = [blob.name for blob in blobs]
+        return True if object_key in blob_names else False
 
-    async def _get_status(self, object_keys: List[str]) -> Any:
+    async def get_status(self, object_key: str) -> bool:
         """
         Run get status sync asynchronously
 
@@ -318,7 +338,7 @@ class GCPBatchExecutor(RemoteExecutor):
             List of bools indicating if the exists or not
         """
         loop = asyncio.get_running_loop()
-        fut = loop.run_in_executor(None, self._get_status, object_keys)
+        fut = loop.run_in_executor(None, self._get_status_sync, object_key)
         return await fut
 
     async def _poll_task(self, object_keys: List[str]) -> str:
@@ -331,11 +351,11 @@ class GCPBatchExecutor(RemoteExecutor):
         Return(s):
             object_key
         """
-        time_left = self.time_limit
+        time_left = self.timeout
         while time_left > 0:
             for object_key in object_keys:
                 self._debug_log(f"Polling object: {object_key}")
-                object_status = await self._get_status(object_keys)
+                object_status = await self.get_status(object_key)
                 if object_status:
                     return object_key
                 await asyncio.sleep(self.poll_freq)
