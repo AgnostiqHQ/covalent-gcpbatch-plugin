@@ -82,7 +82,7 @@ jobs:
 
       - name: Transform semver version to pep440
         id: version-transform
-        uses: ./.github/actions/version-transform
+        uses: AgnostiqHQ/covalent/.github/actions/version-transform
         with:
           version-path: VERSION
       
@@ -102,7 +102,7 @@ jobs:
         run: |
           VERSION="$(cat ./VERSION)"
           pip install ./dist/covalent-gcpbatch-plugin-*.tar.gz
-          
+
       - name: Test import via entrypoint
         run: from covalent.executor import GCPBatchExecutor
         shell: python
