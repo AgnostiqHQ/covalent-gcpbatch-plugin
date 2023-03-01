@@ -20,3 +20,6 @@
 
 def test_sample():
     assert True
+
+def test_two():
+    assert True
