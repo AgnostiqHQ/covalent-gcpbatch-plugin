@@ -18,6 +18,8 @@
 #
 # Relief from the License may be granted by purchasing a commercial license.
 
-# Include any dependencies for the plugin in this file.
 
-covalent>=0.202.0,<1
+EXECUTOR_PLUGIN_NAME = "GCPBatchExecutor"
+
+class GCPBatchExecutor:
+    pass
