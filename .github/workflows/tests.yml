@@ -95,7 +95,7 @@ jobs:
           VERSION="$(cat ./VERSION)"
           pip install ./dist/covalent-gcpbatch-plugin-${VERSION}.tar.gz
       - name: Test import via entrypoint
-        run: from covalent.executor import gcpbatchExecutor
+        run: from covalent.executor import GCPBatchExecutor
         shell: python
 
       - name: Run tests
