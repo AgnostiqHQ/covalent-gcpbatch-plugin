@@ -28,10 +28,7 @@ ARG PRE_RELEASE
 
 RUN apt-get update && \
 		pip install google-cloud-batch \
-								google-cloud-storage \
-								google-cloud-iam \
-								google-cloud-logging \
-								google-cloud-artifact-registry
+								google-cloud-storage
 
 
 RUN if [ -z "$PRE_RELEASE" ]; then \
