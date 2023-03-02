@@ -383,7 +383,7 @@ class GCPBatchExecutor(RemoteExecutor):
                 if object_status:
                     return result_filename
                 # Look for the exception object
-                self._debug_log(f"Polling object: {exception_filename}")
+                self._debug_log(f"Polling {job_name} for {exception_filename}")
                 object_status = await self.get_status(exception_filename)
                 if object_status:
                     return exception_filename
