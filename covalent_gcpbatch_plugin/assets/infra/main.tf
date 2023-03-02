@@ -109,16 +109,3 @@ resource google_project_iam_member storage_object_reader {
   role = "roles/storage.objectViewer"
   member = google_service_account.covalent.member
 }
-
-# Create batch job configuration json
-resource local_file job_config_json {
-  depends_on = [
-    google_storage_bucket.covalent,
-    google_service_account.covalent,
-  ]
-  content = templatefile("${path.module}/batch_job.json", {
-    container_image_uri=local.executor_image_tag,
-    service_account_email=google_service_account.covalent.email,
-    bucket_path="${google_storage_bucket.covalent.name}"})
-  filename = "${path.module}/job.json"
-}

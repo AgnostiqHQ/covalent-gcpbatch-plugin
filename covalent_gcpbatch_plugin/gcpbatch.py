@@ -382,15 +382,14 @@ class GCPBatchExecutor(RemoteExecutor):
                 object_status = await self.get_status(result_filename)
                 if object_status:
                     return result_filename
+            elif state_name == "FAILED":
                 # Look for the exception object
                 self._debug_log(f"Polling {job_name} for {exception_filename}")
                 object_status = await self.get_status(exception_filename)
                 if object_status:
                     return exception_filename
-            elif state_name == "STATE_UNSPECIFIED" or state_name == "FAILED":
-                raise RuntimeError(
-                    f"Job {job_name} left in failed or left in an unspecified state"
-                )
+            elif state_name == "STATE_UNSPECIFIED":
+                raise RuntimeError(f"Job {job_name} left in an unspecified state")
             else:
                 await asyncio.sleep(self.poll_freq)
                 time_left -= self.poll_freq
