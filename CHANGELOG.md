@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial implementation of the `GCPBatchExecutor`
 
+### Operations
+
+- Updating changelog workflow to reuse actions.
+- Debugging tests workflow
+
 ## [0.1.0] - 2023-03-01
 
 

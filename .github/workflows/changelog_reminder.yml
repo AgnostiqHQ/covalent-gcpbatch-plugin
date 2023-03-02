@@ -19,7 +19,7 @@
 # Relief from the License may be granted by purchasing a commercial license.
 
 on:
-  pull_request
+  pull_request:
 
 name: Changelog Reminder
 

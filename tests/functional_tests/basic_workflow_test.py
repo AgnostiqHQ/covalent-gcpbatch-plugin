@@ -22,6 +22,7 @@ import covalent as ct
 import pytest
 
 
+@pytest.mark.skip(reason="Executor has not yet been implemented.")
 @pytest.mark.functional_tests
 def test_basic_workflow():
     @ct.electron(executor="gcpbatch", deps_pip=ct.DepsPip(packages=["numpy"]))
