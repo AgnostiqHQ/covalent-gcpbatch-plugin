@@ -24,8 +24,11 @@ import pytest
 
 @pytest.mark.functional_tests
 def test_basic_workflow():
-    @ct.electron(executor="gcpbatch")
+    @ct.electron(executor="gcpbatch", deps_pip=ct.DepsPip(packages=["numpy"]))
     def join_words(a, b):
+        import numpy as np
+
+        t0 = np.linspace(1, 10)
         return ", ".join([a, b])
 
     @ct.electron

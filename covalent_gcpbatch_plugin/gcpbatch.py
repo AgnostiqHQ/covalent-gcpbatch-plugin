@@ -28,11 +28,12 @@ from covalent._shared_files.logger import app_log
 from covalent._shared_files.config import get_config
 from typing import Callable, Dict, Optional, List, Any
 from covalent.executor.executor_plugins.remote_executor import RemoteExecutor
+from covalent._shared_files.exceptions import TaskCancelledError
 
 executor_plugin_name = "GCPBatchExecutor"
 
 _EXECUTOR_PLUGIN_DEFAULTS = {
-    "bucket_name": "CovalentStorageBucket",
+    "bucket_name": "",
     "container_image_uri": "",
     "service_account_email": "",
     "project_id": "",
@@ -49,6 +50,7 @@ MOUNT_PATH = "/mnt/disks/covalent"
 COVALENT_TASK_FUNC_FILENAME = "func-{dispatch_id}-{node_id}.pkl"
 RESULT_FILENAME = "result-{dispatch_id}-{node_id}.pkl"
 EXCEPTION_FILENAME = "exception-{dispatch_id}-{node_id}.json"
+BATCH_JOB_NAME = "job-{dispatch_id}-{node_id}"
 
 
 class GCPBatchExecutor(RemoteExecutor):
@@ -67,20 +69,21 @@ class GCPBatchExecutor(RemoteExecutor):
         poll_freq: Optional[int] = 5,
         retries: Optional[int] = 1,
     ):
-        self.project_id = project_id or get_config("executor.gcpbatch.project_id")
-        self.region = region or get_config("executor.gcpbatch.region")
-        self.bucket_name = bucket_name or get_config("executor.gcpbatch.bucket_name")
+        self._debug_log(f"Project id is {project_id}")
+        self.project_id = project_id or get_config("executors.gcpbatch.project_id")
+        self.region = region or get_config("executors.gcpbatch.region")
+        self.bucket_name = bucket_name or get_config("executors.gcpbatch.bucket_name")
         self.container_image_uri = container_image_uri or get_config(
-            "executor.gcpbatch.container_image_uri"
+            "executors.gcpbatch.container_image_uri"
         )
         self.service_account_email = service_account_email or get_config(
-            "executor.gcpbatch.service_account_email"
+            "executors.gcpbatch.service_account_email"
         )
-        self.vcpus = vcpus or int(get_config("executor.gcpbatch.vcpus"))
-        self.memory = memory or int(get_config("executor.gcpbatch.memory"))
-        self.timeout = timeout or int(get_config("executor.gcpbatch.timeout"))
-        self.poll_freq = poll_freq or int(get_config("executor.gcpbatch.poll_freq"))
-        self.retries = retries or int(get_config("executor.gcpbatch.retries"))
+        self.vcpus = vcpus or int(get_config("executors.gcpbatch.vcpus"))
+        self.memory = memory or int(get_config("executors.gcpbatch.memory"))
+        self.timeout = timeout or int(get_config("executors.gcpbatch.timeout"))
+        self.poll_freq = poll_freq or int(get_config("executors.gcpbatch.poll_freq"))
+        self.retries = retries or int(get_config("executors.gcpbatch.retries"))
 
         super().__init__(poll_freq=self.poll_freq)
 
@@ -245,24 +248,16 @@ class GCPBatchExecutor(RemoteExecutor):
         fut = loop.run_in_executor(None, self._create_batch_job_sync, image_uri, task_metadata)
         return await fut
 
-    async def submit_task(self, task_metadata: Dict, batch_job: batch_v1.Job) -> Any:
-        dispatch_id = task_metadata["dispatch_id"]
-        node_id = task_metadata["node_id"]
-        job_name = f"job-{dispatch_id}-{node_id}"
-
+    async def submit_task(self, dispatch_id: str, node_id: int, batch_job: batch_v1.Job) -> Any:
         batch_client = self._get_batch_client()
 
         create_request = batch_v1.CreateJobRequest()
         create_request.job = batch_job
-        create_request.job_id = job_name
+        create_request.job_id = BATCH_JOB_NAME.format(dispatch_id=dispatch_id, node_id=node_id)
         create_request.parent = f"projects/{self.project_id}/locations/{self.region}"
 
         return await batch_client.create_job(create_request)
 
-    async def cancel(self) -> bool:
-        pass
-
-    #    async def _submit_job(self, batch_job: batch_v1.Job, task_metadata: Dict[str, str]) -> Job:
     async def get_job_state(self, job_name: str) -> Any:
         """Get the job's state"""
         batch_client = self._get_batch_client()
@@ -274,29 +269,46 @@ class GCPBatchExecutor(RemoteExecutor):
     async def run(self, function: Callable, args: List, kwargs: Dict, task_metadata: Dict) -> Any:
         dispatch_id = task_metadata["dispatch_id"]
         node_id = task_metadata["node_id"]
+        batch_job_name = BATCH_JOB_NAME.format(dispatch_id=dispatch_id, node_id=node_id)
         result_filename = RESULT_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
         exception_filename = EXCEPTION_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
 
         # Pickle the function, args and kwargs
-        local_func_filename = await self._pickle_func(function, args, kwargs, task_metadata)
+        if not await self.get_cancel_requested():
+            local_func_filename = await self._pickle_func(function, args, kwargs, task_metadata)
+        else:
+            self._debug_log(f"TASK CANCELLED")
+            raise TaskCancelledError(f"Batch job {batch_job_name} requested to be cancelled")
 
         # Upload the pickled function, args & kwargs to storage bucket
-        self._debug_log(f"Uploading {local_func_filename} to {self.bucket_name}")
-        await self._upload_task(local_func_filename)
+        if not await self.get_cancel_requested():
+            self._debug_log(f"Uploading {local_func_filename} to {self.bucket_name}")
+            await self._upload_task(local_func_filename)
+        else:
+            raise TaskCancelledError(f"Batch job {batch_job_name} requested to be cancelled")
 
         # Create Batch job
-        self._debug_log(f"Creating batch job")
-        batch_job = await self._create_batch_job(
-            image_uri=self.container_image_uri, task_metadata=task_metadata
-        )
+        if not await self.get_cancel_requested():
+            self._debug_log(f"Creating batch job")
+            batch_job = await self._create_batch_job(
+                image_uri=self.container_image_uri, task_metadata=task_metadata
+            )
+        else:
+            raise TaskCancelledError(f"Batch job {batch_job_name} requested to be cancelled")
 
         # Submit Batch job
-        batch_job = await self.submit_task(task_metadata, batch_job)
-        self._debug_log(f"Submitted batch job {batch_job.uid}")
+        if not await self.get_cancel_requested():
+            batch_job = await self.submit_task(dispatch_id, node_id, batch_job)
+            self._debug_log(f"Submitted batch job {batch_job.uid}")
+        else:
+            raise TaskCancelledError(f"Batch job {batch_job_name} requested to be cancelled")
+
+        self._debug_log(f"Saving job handle {batch_job_name} to the database")
+        await self.set_job_handle(handle=batch_job_name)
 
         # Poll task for result or exception
         self._debug_log(f"Polling task for {result_filename} or {exception_filename}")
-        object_key = await self._poll_task([result_filename, exception_filename])
+        object_key = await self._poll_task(task_metadata, result_filename, exception_filename)
 
         if object_key == exception_filename:
             # Download the raised exception
@@ -341,7 +353,9 @@ class GCPBatchExecutor(RemoteExecutor):
         fut = loop.run_in_executor(None, self._get_status_sync, object_key)
         return await fut
 
-    async def _poll_task(self, object_keys: List[str]) -> str:
+    async def _poll_task(
+        self, task_metadata: Dict, result_filename: str, exception_filename: str
+    ) -> Optional[str]:
         """
         Poll task until its result is ready
 
@@ -351,17 +365,37 @@ class GCPBatchExecutor(RemoteExecutor):
         Return(s):
             object_key
         """
+        dispatch_id = task_metadata["dispatch_id"]
+        node_id = task_metadata["node_id"]
+        job_name = BATCH_JOB_NAME.format(dispatch_id=dispatch_id, node_id=node_id)
+
         time_left = self.timeout
         while time_left > 0:
-            for object_key in object_keys:
-                self._debug_log(f"Polling object: {object_key}")
-                object_status = await self.get_status(object_key)
-                if object_status:
-                    return object_key
-                await asyncio.sleep(self.poll_freq)
-            time_left -= self.poll_freq
+            try:
+                job_state = await self.get_job_state(job_name)
+            except Exception:
+                raise TaskCancelledError(f"Batch job {job_name} cancelled")
 
-        raise TimeoutError(f"{object_keys} not found in {self.bucket_name}")
+            if job_state == batch_v1.JobStatus.State.SUCCEEDED:
+                # Look for the result object
+                self._debug_log(f"Polling object: {result_filename}")
+                object_status = await self.get_status(result_filename)
+                if object_status:
+                    return result_filename
+            elif job_state == batch_v1.JobStatus.State.FAILED:
+                # Look for the exception object
+                self._debug_log(f"Polling object: {exception_filename}")
+                object_status = await self.get_status(exception_filename)
+                if object_status:
+                    return exception_filename
+            elif job_state == batch_v1.JobStatus.State.DELETION_IN_PROGRESS:
+                raise TaskCancelledError(f"Batch job {job_name} cancelled")
+            else:
+                await asyncio.sleep(self.poll_freq)
+                time_left -= self.poll_freq
+                continue
+
+        raise TimeoutError(f"Batch job {job_name} timed out")
 
     def _download_blob_to_file_sync(self, bucket_name: str, blob_name: str) -> Optional[str]:
         """
@@ -445,3 +479,22 @@ class GCPBatchExecutor(RemoteExecutor):
         except Exception as ex:
             self._debug_log(str(ex))
             raise
+
+    async def cancel(self, task_metadata: Dict, job_handle: str) -> None:
+        """
+        Cancel the batch job
+
+        Arg(s)
+            task_metadata: Dictionary with the task's dispatch_id and node id
+            job_handle: Unique job handle assigned to the task by Batch
+
+        Return(s)
+            None
+        """
+        dispatch_id = task_metadata["dispatch_id"]
+        node_id = task_metadata["node_id"]
+        job_name = f"job-{dispatch_id}-{node_id}"
+        batch_client = self._get_batch_client()
+        await batch_client.delete_job(
+            name=f"projects/{self.project_id}/locations/{self.region}/jobs/{job_name}"
+        )

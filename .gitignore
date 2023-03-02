@@ -124,6 +124,5 @@ ipython_config.py
 *.tfstate
 *.tfstate.backup
 *.plan
-sample
 *.json
 tags

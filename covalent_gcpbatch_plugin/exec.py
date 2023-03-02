@@ -56,10 +56,10 @@ def main() -> None:
         task_mountpoint = os.environ["GCPBATCH_TASK_MOUNTPOINT"]
         exception_filename = os.environ["EXCEPTION_FILENAME"]
         local_exception_filename = os.path.join(task_mountpoint, exception_filename)
-
         # Write the exception to the mount path
         with open(local_exception_filename, "w") as f:
             json.dump(str(ex), f)
+        raise
 
 
 if __name__ == "__main__":
