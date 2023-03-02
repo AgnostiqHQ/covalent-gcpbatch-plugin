@@ -40,7 +40,7 @@ _EXECUTOR_PLUGIN_DEFAULTS = {
     "region": "",
     "vcpus": 2,
     "memory": 512,
-    "timeout": 300,
+    "time_limit": 300,
     "poll_freq": 5,
     "retries": 3,
 }
@@ -65,7 +65,7 @@ class GCPBatchExecutor(RemoteExecutor):
         region: Optional[str] = None,
         vcpus: Optional[int] = None,
         memory: Optional[int] = None,
-        timeout: Optional[int] = 300,
+        time_limit: Optional[int] = 300,
         poll_freq: Optional[int] = 5,
         retries: Optional[int] = 1,
     ):
@@ -81,11 +81,11 @@ class GCPBatchExecutor(RemoteExecutor):
         )
         self.vcpus = vcpus or int(get_config("executors.gcpbatch.vcpus"))
         self.memory = memory or int(get_config("executors.gcpbatch.memory"))
-        self.timeout = timeout or int(get_config("executors.gcpbatch.timeout"))
+        self.time_limit = time_limit or int(get_config("executors.gcpbatch.time_limit"))
         self.poll_freq = poll_freq or int(get_config("executors.gcpbatch.poll_freq"))
         self.retries = retries or int(get_config("executors.gcpbatch.retries"))
 
-        super().__init__(poll_freq=self.poll_freq)
+        super().__init__(poll_freq=self.poll_freq, time_limit=self.time_limit)
 
     @staticmethod
     def _get_batch_client() -> batch_v1.BatchServiceAsyncClient:
@@ -94,7 +94,7 @@ class GCPBatchExecutor(RemoteExecutor):
     @staticmethod
     def _debug_log(msg: str) -> None:
         """Write a debug log message to log file"""
-        app_log.debug(f"[GoogleBatchExecutor] | {msg}")
+        app_log.debug(f"[GCPBatchExecutor] | {msg}")
 
     def _pickle_func_sync(
         self, function: Callable, args: List, kwargs: List, task_metadata: Dict
@@ -221,7 +221,7 @@ class GCPBatchExecutor(RemoteExecutor):
             cpu_milli=self.vcpus * 1000, memory_mib=self.memory
         )
         task_spec.max_retry_count = self.retries
-        task_spec.max_run_duration = f"{self.timeout}s"
+        task_spec.max_run_duration = f"{self.time_limit}s"
 
         # Create task group
         task_group = batch_v1.TaskGroup(task_count=1, task_spec=task_spec)
@@ -264,7 +264,7 @@ class GCPBatchExecutor(RemoteExecutor):
         job_description = await batch_client.get_job(
             name=f"projects/{self.project_id}/locations/{self.region}/jobs/{job_name}"
         )
-        return job_description.status.State
+        return job_description.status.state.name
 
     async def run(self, function: Callable, args: List, kwargs: Dict, task_metadata: Dict) -> Any:
         dispatch_id = task_metadata["dispatch_id"]
@@ -369,27 +369,28 @@ class GCPBatchExecutor(RemoteExecutor):
         node_id = task_metadata["node_id"]
         job_name = BATCH_JOB_NAME.format(dispatch_id=dispatch_id, node_id=node_id)
 
-        time_left = self.timeout
+        time_left = self.time_limit
         while time_left > 0:
-            try:
-                job_state = await self.get_job_state(job_name)
-            except Exception:
+            state_name = await self.get_job_state(job_name)
+            self._debug_log(f"Job {job_name} state {state_name}")
+            # Check if get cancel requested is true and the job is in deletion mode
+            if state_name == "DELETION_IN_PROGRESS" and await self.get_cancel_requested():
                 raise TaskCancelledError(f"Batch job {job_name} cancelled")
-
-            if job_state == batch_v1.JobStatus.State.SUCCEEDED:
+            elif state_name == "SUCCEEDED":
                 # Look for the result object
-                self._debug_log(f"Polling object: {result_filename}")
+                self._debug_log(f"Polling {job_name} for {result_filename}")
                 object_status = await self.get_status(result_filename)
                 if object_status:
                     return result_filename
-            elif job_state == batch_v1.JobStatus.State.FAILED:
                 # Look for the exception object
                 self._debug_log(f"Polling object: {exception_filename}")
                 object_status = await self.get_status(exception_filename)
                 if object_status:
                     return exception_filename
-            elif job_state == batch_v1.JobStatus.State.DELETION_IN_PROGRESS:
-                raise TaskCancelledError(f"Batch job {job_name} cancelled")
+            elif state_name == "STATE_UNSPECIFIED" or state_name == "FAILED":
+                raise RuntimeError(
+                    f"Job {job_name} left in failed or left in an unspecified state"
+                )
             else:
                 await asyncio.sleep(self.poll_freq)
                 time_left -= self.poll_freq
@@ -491,10 +492,7 @@ class GCPBatchExecutor(RemoteExecutor):
         Return(s)
             None
         """
-        dispatch_id = task_metadata["dispatch_id"]
-        node_id = task_metadata["node_id"]
-        job_name = f"job-{dispatch_id}-{node_id}"
         batch_client = self._get_batch_client()
         await batch_client.delete_job(
-            name=f"projects/{self.project_id}/locations/{self.region}/jobs/{job_name}"
+            name=f"projects/{self.project_id}/locations/{self.region}/jobs/{job_handle}"
         )
