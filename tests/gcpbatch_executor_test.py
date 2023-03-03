@@ -36,6 +36,7 @@ def gcpbatch_executor():
         time_limit=300,
         poll_freq=2,
         retries=1,
+        cache_dir="/tmp",
     )
 
 
