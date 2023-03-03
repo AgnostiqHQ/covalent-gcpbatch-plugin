@@ -65,11 +65,10 @@ class GCPBatchExecutor(RemoteExecutor):
         region: Optional[str] = None,
         vcpus: Optional[int] = None,
         memory: Optional[int] = None,
-        time_limit: Optional[int] = 300,
-        poll_freq: Optional[int] = 5,
-        retries: Optional[int] = 1,
+        time_limit: Optional[int] = None,
+        poll_freq: Optional[int] = None,
+        retries: Optional[int] = None,
     ):
-        self._debug_log(f"Project id is {project_id}")
         self.project_id = project_id or get_config("executors.gcpbatch.project_id")
         self.region = region or get_config("executors.gcpbatch.region")
         self.bucket_name = bucket_name or get_config("executors.gcpbatch.bucket_name")
@@ -85,7 +84,7 @@ class GCPBatchExecutor(RemoteExecutor):
         self.poll_freq = poll_freq or int(get_config("executors.gcpbatch.poll_freq"))
         self.retries = retries or int(get_config("executors.gcpbatch.retries"))
 
-        super().__init__(poll_freq=self.poll_freq, time_limit=self.time_limit)
+        super().__init__(poll_freq=self.poll_freq, time_limit=self.time_limit, retries=retries)
 
     @staticmethod
     def _get_batch_client() -> batch_v1.BatchServiceAsyncClient:
