@@ -77,3 +77,29 @@ def test_executor_default_constructor(mocker):
     mock_get_config = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.get_config")
     GCPBatchExecutor()
     assert mock_get_config.call_count == 10
+
+
+@pytest.mark.asyncio
+async def test_pickle_function(gcpbatch_executor, mocker):
+    """
+    Test executor properly pickles the function
+    """
+
+    def f(x):
+        return x
+
+    mock_app_log = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.app_log.debug")
+    dispatch_id = "abcdef"
+    node_id = 0
+    task_metadata = {"dispatch_id": dispatch_id, "node_id": node_id}
+    mock_os_path_join = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.os.path.join")
+    mock_pickle = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.pickle.dump")
+
+    await gcpbatch_executor._pickle_func(f, 1, {}, task_metadata)
+
+    assert mock_app_log.call_count == 2
+    mock_os_path_join.assert_called_once_with(
+        gcpbatch_executor.cache_dir, f"func-{dispatch_id}-{node_id}.pkl"
+    )
+
+    mock_pickle.assert_called_once()
