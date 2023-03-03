@@ -92,7 +92,9 @@ async def test_pickle_function(gcpbatch_executor, mocker):
     dispatch_id = "abcdef"
     node_id = 0
     task_metadata = {"dispatch_id": dispatch_id, "node_id": node_id}
-    mock_os_path_join = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.os.path.join")
+    mock_os_path_join = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.os.path.join", return_value=MagicMock()
+    )
     mock_pickle_dump = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.pickle.dump")
 
     await gcpbatch_executor._pickle_func(f, 1, {}, task_metadata)
