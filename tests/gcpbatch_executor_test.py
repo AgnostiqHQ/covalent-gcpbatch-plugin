@@ -55,6 +55,7 @@ def test_executor_explicit_constructor(mocker):
         time_limit=300,
         poll_freq=2,
         retries=1,
+        cache_dir="/tmp",
     )
 
     assert test_executor.project_id == "test-project"
@@ -67,6 +68,7 @@ def test_executor_explicit_constructor(mocker):
     assert test_executor.time_limit == 300
     assert test_executor.poll_freq == 2
     assert test_executor.retries == 1
+    assert test_executor.cache_dir == "/tmp"
     assert mock_get_config.call_count == 0
 
 
