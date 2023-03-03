@@ -79,21 +79,30 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install --no-cache-dir -r tests/requirements.txt
+
+      - name: Transform semver version to pep440
+        id: version-transform
+        uses: AgnostiqHQ/covalent/.github/actions/version-transform@develop
+        with:
+          version-path: VERSION
       
       - name: Build distribution
         run: python setup.py sdist
 
       - name: Validate plugin
         run: |
-          VERSION="$(cat ./VERSION)"
+          VERSION="${{ steps.version-transform.outputs.version }}"
+          echo "Using transformed VERSION: $VERSION"
           cd dist
           tar xzf covalent-gcpbatch-plugin-${VERSION}.tar.gz
           diff -r covalent-gcpbatch-plugin-${VERSION}/covalent_gcpbatch_plugin/ ../covalent_gcpbatch_plugin/
           rm -rf covalent-gcpbatch-plugin-${VERSION}/
+
       - name: Install GCP Batch plugin
         run: |
           VERSION="$(cat ./VERSION)"
-          pip install ./dist/covalent-gcpbatch-plugin-${VERSION}.tar.gz
+          pip install ./dist/covalent-gcpbatch-plugin-*.tar.gz
+
       - name: Test import via entrypoint
         run: from covalent.executor import GCPBatchExecutor
         shell: python

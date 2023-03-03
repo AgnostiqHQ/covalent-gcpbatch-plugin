@@ -18,5 +18,13 @@
 #
 # Relief from the License may be granted by purchasing a commercial license.
 
+from covalent_gcpbatch_plugin.gcpbatch import add
+
 def test_sample():
     assert True
+
+def test_two():
+    assert True
+
+def test_add():
+    assert add(1, 2) == 3
