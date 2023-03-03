@@ -27,8 +27,7 @@ ARG COVALENT_PACKAGE_VERSION
 ARG PRE_RELEASE
 
 RUN apt-get update && \
-		pip install google-cloud-batch \
-								google-cloud-storage
+		pip install google-cloud-batch google-cloud-storage
 
 
 RUN if [ -z "$PRE_RELEASE" ]; then \

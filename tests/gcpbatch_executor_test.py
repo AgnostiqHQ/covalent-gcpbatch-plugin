@@ -18,7 +18,9 @@
 #
 # Relief from the License may be granted by purchasing a commercial license.
 
+from google.cloud.batch_v1.services.batch_service.async_client import service_account
 import pytest
+import os
 from unittest.mock import MagicMock, AsyncMock
 from covalent_gcpbatch_plugin import GCPBatchExecutor
 
@@ -120,4 +122,72 @@ async def test_upload_task(gcpbatch_executor, mocker):
     mock_storage_client.return_value.bucket.assert_called_once_with(gcpbatch_executor.bucket_name)
     mock_storage_client.return_value.bucket.return_value.blob.assert_called_once_with(
         func_filename
+    )
+
+
+@pytest.mark.asyncio
+async def test_create_batch_job(gcpbatch_executor, mocker):
+    """Test batch job create"""
+    dispatch_id = "abcdef"
+    node_id = 0
+    task_metadata = {"dispatch_id": dispatch_id, "node_id": node_id}
+    image_uri = "test-image"
+
+    func_filename = f"func-{dispatch_id}-{node_id}.pkl"
+    result_filename = f"result-{dispatch_id}-{node_id}.pkl"
+    exception_filename = f"exception-{dispatch_id}-{node_id}.json"
+
+    mock_app_log_debug = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.app_log.debug")
+    mock_batch_v1 = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.batch_v1")
+    mock_task_spec = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.batch_v1.TaskSpec", return_value=MagicMock()
+    )
+    mock_runnable = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.batch_v1.Runnable", return_value=MagicMock()
+    )
+
+    await gcpbatch_executor._create_batch_job(image_uri, task_metadata)
+    mock_task_spec.assert_called_once()
+    mock_runnable.assert_called_once()
+    mock_batch_v1.Runnable.Container.assert_called_once_with(image_uri=image_uri)
+    mock_task_spec.return_value.runnables.append.assert_called_once_with(
+        mock_runnable.return_value
+    )
+    mock_batch_v1.Environment.assert_called_once_with(
+        variables={
+            "COVALENT_TASK_FUNC_FILENAME": os.path.join("/mnt/disks/covalent", func_filename),
+            "RESULT_FILENAME": os.path.join("/mnt/disks/covalent", result_filename),
+            "EXCEPTION_FILENAME": os.path.join("/mnt/disks/covalent", exception_filename),
+        }
+    )
+    mock_batch_v1.GCS.assert_called_once()
+    assert mock_batch_v1.GCS.return_value.remote_path == gcpbatch_executor.bucket_name
+    mock_batch_v1.Volume.assert_called_once()
+    assert mock_batch_v1.Volume.return_value.gcs == mock_batch_v1.GCS.return_value
+    assert mock_batch_v1.Volume.return_value.mount_path == "/mnt/disks/covalent"
+    assert mock_batch_v1.TaskSpec.return_value.volumes == [mock_batch_v1.Volume.return_value]
+
+    mock_batch_v1.ComputeResource.assert_called_once_with(
+        cpu_milli=gcpbatch_executor.vcpus * 1000, memory_mib=gcpbatch_executor.memory
+    )
+
+    assert mock_batch_v1.TaskSpec.return_value.compute_resource == mock_batch_v1.ComputeResource(
+        cpu_milli=gcpbatch_executor.vcpus * 1000, memory_mib=gcpbatch_executor.memory
+    )
+    assert mock_batch_v1.TaskSpec.return_value.max_retry_count == gcpbatch_executor.retries
+    assert (
+        mock_batch_v1.TaskSpec.return_value.max_run_duration == f"{gcpbatch_executor.time_limit}s"
+    )
+
+    mock_batch_v1.TaskGroup.assert_called_once_with(
+        task_count=1, task_spec=mock_batch_v1.TaskSpec.return_value
+    )
+    mock_batch_v1.AllocationPolicy.assert_called_once_with(
+        service_account={"email": gcpbatch_executor.service_account_email}
+    )
+    mock_batch_v1.LogsPolicy.assert_called_once_with(destination="CLOUD_LOGGING")
+    mock_batch_v1.Job.assert_called_once_with(
+        task_groups=[mock_batch_v1.TaskGroup.return_value],
+        allocation_policy=mock_batch_v1.AllocationPolicy.return_value,
+        logs_policy=mock_batch_v1.LogsPolicy.return_value,
     )
