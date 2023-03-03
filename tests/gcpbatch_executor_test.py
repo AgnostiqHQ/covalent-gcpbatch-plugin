@@ -93,7 +93,7 @@ async def test_pickle_function(gcpbatch_executor, mocker):
     node_id = 0
     task_metadata = {"dispatch_id": dispatch_id, "node_id": node_id}
     mock_os_path_join = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.os.path.join")
-    mock_pickle = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.pickle.dump")
+    mock_pickle_dump = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.pickle.dump")
 
     await gcpbatch_executor._pickle_func(f, 1, {}, task_metadata)
 
@@ -101,5 +101,24 @@ async def test_pickle_function(gcpbatch_executor, mocker):
     mock_os_path_join.assert_called_once_with(
         gcpbatch_executor.cache_dir, f"func-{dispatch_id}-{node_id}.pkl"
     )
+    mock_pickle_dump.assert_called_once()
 
-    mock_pickle.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_upload_task(gcpbatch_executor, mocker):
+    """Test the executor uploads the pickled object properly to the bucket"""
+    func_filename = "test.pkl"
+
+    mock_app_log = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.app_log.debug")
+    mock_storage_client = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.storage.Client", return_value=MagicMock()
+    )
+
+    await gcpbatch_executor._upload_task(func_filename)
+
+    mock_app_log.assert_called_once()
+    mock_storage_client.assert_called_once()
+    mock_storage_client.return_value.bucket.assert_called_once_with(gcpbatch_executor.bucket_name)
+    mock_storage_client.return_value.bucket.return_value.blob.assert_called_once_with(
+        func_filename
+    )
