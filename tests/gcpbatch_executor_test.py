@@ -191,3 +191,32 @@ async def test_create_batch_job(gcpbatch_executor, mocker):
         allocation_policy=mock_batch_v1.AllocationPolicy.return_value,
         logs_policy=mock_batch_v1.LogsPolicy.return_value,
     )
+
+
+@pytest.mark.asyncio
+async def test_submit_task(gcpbatch_executor, mocker):
+    """Test task submission"""
+    mock_batch_job = MagicMock()
+    dispatch_id = "abcdef"
+    node_id = 0
+    mock_get_batch_service_client = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.GCPBatchExecutor._get_batch_client",
+        return_value=AsyncMock(),
+    )
+    mock_batch_v1 = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.batch_v1")
+
+    await gcpbatch_executor.submit_task(
+        dispatch_id=dispatch_id, node_id=node_id, batch_job=mock_batch_job
+    )
+
+    mock_batch_v1.CreateJobRequest.assert_called_once()
+    assert mock_batch_v1.CreateJobRequest.return_value.job == mock_batch_job
+    assert mock_batch_v1.CreateJobRequest.return_value.job_id == f"job-{dispatch_id}-{node_id}"
+    assert (
+        mock_batch_v1.CreateJobRequest.return_value.parent
+        == f"projects/{gcpbatch_executor.project_id}/locations/{gcpbatch_executor.region}"
+    )
+
+    mock_get_batch_service_client.return_value.create_job.assert_awaited_once_with(
+        mock_batch_v1.CreateJobRequest.return_value
+    )
