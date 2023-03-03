@@ -20,6 +20,6 @@
 
 # Include any dependencies for the plugin in this file.
 
-covalent>=0.218.0,<1
+covalent==0.218.0rc0
 google-cloud-batch
 google-cloud-storage
