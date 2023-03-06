@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+## [0.4.0] - 2023-03-06
+
 ### Changed
 
 - Changelog workflow (to not use reusable action and postpone that for later).
