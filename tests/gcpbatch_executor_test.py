@@ -220,3 +220,25 @@ async def test_submit_task(gcpbatch_executor, mocker):
     mock_get_batch_service_client.return_value.create_job.assert_awaited_once_with(
         mock_batch_v1.CreateJobRequest.return_value
     )
+
+
+@pytest.mark.asyncio
+async def test_get_job_state(gcpbatch_executor, mocker):
+    """Test getting batch job state"""
+    mock_job_name = "test_job"
+    mock_get_batch_client = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.GCPBatchExecutor._get_batch_client",
+        return_value=AsyncMock(),
+    )
+    await gcpbatch_executor.get_job_state(mock_job_name)
+
+    mock_get_batch_client.assert_called_once()
+    mock_get_batch_client.return_value.get_job.assert_awaited_once_with(
+        name=f"projects/{gcpbatch_executor.project_id}/locations/{gcpbatch_executor.region}/jobs/{mock_job_name}"
+    )
+
+
+#        job_description = await batch_client.get_job(
+#            name=f"projects/{self.project_id}/locations/{self.region}/jobs/{job_name}"
+#        )
+#        return job_description.status.state.name
