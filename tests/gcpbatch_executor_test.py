@@ -238,7 +238,57 @@ async def test_get_job_state(gcpbatch_executor, mocker):
     )
 
 
-#        job_description = await batch_client.get_job(
-#            name=f"projects/{self.project_id}/locations/{self.region}/jobs/{job_name}"
-#        )
-#        return job_description.status.state.name
+@pytest.mark.asyncio
+async def test_get_status_true(gcpbatch_executor, mocker):
+    """Testing querying status of the job"""
+    mock_object_key = "test"
+    mock_blob = MagicMock()
+    mock_blob.name = "test"
+    mock_storage_client = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.storage.Client", return_value=MagicMock()
+    )
+    mock_storage_client.return_value.list_blobs.return_value = [mock_blob]
+
+    res = await gcpbatch_executor.get_status(object_key=mock_object_key)
+
+    mock_storage_client.assert_called_once()
+    mock_storage_client.return_value.list_blobs.assert_called_once_with(
+        gcpbatch_executor.bucket_name
+    )
+    assert res
+
+
+@pytest.mark.asyncio
+async def test_get_status_false(gcpbatch_executor, mocker):
+    """Testing querying status of the job"""
+    mock_object_key = "test2"
+    mock_blob = MagicMock()
+    mock_blob.name = "test"
+    mock_storage_client = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.storage.Client", return_value=MagicMock()
+    )
+    mock_storage_client.return_value.list_blobs.return_value = [mock_blob]
+
+    res = await gcpbatch_executor.get_status(object_key=mock_object_key)
+
+    mock_storage_client.assert_called_once()
+    mock_storage_client.return_value.list_blobs.assert_called_once_with(
+        gcpbatch_executor.bucket_name
+    )
+    assert res == False
+
+
+@pytest.mark.asyncio
+async def test_poll_task_raises_exception(gcpbatch_executor, mocker):
+    """Test polling for result/exception object"""
+    dispatch_id = "abcdef"
+    node_id = 0
+    task_metadata = {"dispatch_id": dispatch_id, "node_id": node_id}
+    mock_result_filename = "result.pkl"
+    mock_exception_filename = "exception.json"
+
+    gcpbatch_executor.time_limit = -1
+    with pytest.raises(TimeoutError):
+        await gcpbatch_executor._poll_task(
+            task_metadata, mock_result_filename, mock_exception_filename
+        )
