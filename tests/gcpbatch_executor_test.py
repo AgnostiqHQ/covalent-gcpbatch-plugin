@@ -18,11 +18,12 @@
 #
 # Relief from the License may be granted by purchasing a commercial license.
 
+from covalent._shared_files.exceptions import TaskCancelledError
 from google.cloud.batch_v1.services.batch_service.async_client import service_account
 import pytest
 import os
 from unittest.mock import MagicMock, AsyncMock
-from covalent_gcpbatch_plugin import GCPBatchExecutor
+from covalent_gcpbatch_plugin import GCPBatchExecutor, gcpbatch
 
 
 @pytest.fixture
@@ -292,3 +293,123 @@ async def test_poll_task_raises_exception(gcpbatch_executor, mocker):
         await gcpbatch_executor._poll_task(
             task_metadata, mock_result_filename, mock_exception_filename
         )
+
+
+@pytest.mark.asyncio
+async def test_poll_task_deletion_in_progress(gcpbatch_executor, mocker):
+    """Test poll task functionality"""
+    dispatch_id = "abcdef"
+    node_id = 0
+    task_metadata = {"dispatch_id": dispatch_id, "node_id": node_id}
+    gcpbatch_executor.time_limit = 2
+    gcpbatch_executor.poll_freq = 2
+    gcpbatch_executor.get_job_state = AsyncMock(return_value="DELETION_IN_PROGRESS")
+    gcpbatch_executor.get_cancel_requested = AsyncMock(return_value=True)
+
+    with pytest.raises(TaskCancelledError):
+        await gcpbatch_executor._poll_task(task_metadata, "result.pkl", "exception.pkl")
+
+
+@pytest.mark.asyncio
+async def test_poll_task_succeeded(gcpbatch_executor, mocker):
+    """Test poll task functionality"""
+    dispatch_id = "abcdef"
+    node_id = 0
+    task_metadata = {"dispatch_id": dispatch_id, "node_id": node_id}
+    job_name = f"job-{dispatch_id}-{node_id}"
+    result_filename = f"result-{dispatch_id}-{node_id}.pkl"
+    exception_filename = f"result-{dispatch_id}-{node_id}.pkl"
+    gcpbatch_executor.time_limit = 2
+    gcpbatch_executor.poll_freq = 2
+    gcpbatch_executor.get_job_state = AsyncMock(return_value="SUCCEEDED")
+    mock_app_log_debug = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.GCPBatchExecutor._debug_log"
+    )
+    gcpbatch_executor.get_status = AsyncMock(return_value=True)
+
+    res = await gcpbatch_executor._poll_task(task_metadata, result_filename, exception_filename)
+
+    assert mock_app_log_debug.call_count == 2
+    gcpbatch_executor.get_job_state.assert_awaited_once_with(job_name)
+    gcpbatch_executor.get_status.assert_awaited_once_with(result_filename)
+    assert res == result_filename
+
+
+@pytest.mark.asyncio
+async def test_poll_task_failed(gcpbatch_executor, mocker):
+    """Test polling task when batch job failed"""
+    dispatch_id = "abcdef"
+    node_id = 0
+    task_metadata = {"dispatch_id": dispatch_id, "node_id": node_id}
+    job_name = f"job-{dispatch_id}-{node_id}"
+    result_filename = f"result-{dispatch_id}-{node_id}.pkl"
+    exception_filename = f"result-{dispatch_id}-{node_id}.pkl"
+
+    gcpbatch_executor.time_limit = 2
+    gcpbatch_executor.poll_freq = 2
+
+    gcpbatch_executor.get_job_state = AsyncMock(return_value="FAILED")
+    mock_app_log_debug = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.GCPBatchExecutor._debug_log"
+    )
+    gcpbatch_executor.get_status = AsyncMock(return_value=True)
+
+    res = await gcpbatch_executor._poll_task(task_metadata, result_filename, exception_filename)
+
+    assert mock_app_log_debug.call_count == 2
+    gcpbatch_executor.get_job_state.assert_awaited_once_with(job_name)
+    gcpbatch_executor.get_status.assert_awaited_once_with(exception_filename)
+    assert res == exception_filename
+
+
+@pytest.mark.asyncio
+async def test_poll_task_state_unspecified(gcpbatch_executor, mocker):
+    """Test polling task for state unspecified task"""
+    dispatch_id = "abcdef"
+    node_id = 0
+    task_metadata = {"dispatch_id": dispatch_id, "node_id": node_id}
+    job_name = f"job-{dispatch_id}-{node_id}"
+    result_filename = f"result-{dispatch_id}-{node_id}.pkl"
+    exception_filename = f"result-{dispatch_id}-{node_id}.pkl"
+
+    gcpbatch_executor.time_limit = 2
+    gcpbatch_executor.poll_freq = 2
+
+    gcpbatch_executor.get_job_state = AsyncMock(return_value="STATE_UNSPECIFIED")
+    mock_app_log_debug = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.GCPBatchExecutor._debug_log"
+    )
+    gcpbatch_executor.get_status = AsyncMock(return_value=True)
+
+    with pytest.raises(RuntimeError):
+        await gcpbatch_executor._poll_task(task_metadata, result_filename, exception_filename)
+
+    assert mock_app_log_debug.call_count == 1
+    gcpbatch_executor.get_job_state.assert_awaited_once_with(job_name)
+
+
+@pytest.mark.asyncio
+async def test_poll_task_not_listed_state(gcpbatch_executor, mocker):
+    """Test polling sleeping when not state matches"""
+    dispatch_id = "abcdef"
+    node_id = 0
+    task_metadata = {"dispatch_id": dispatch_id, "node_id": node_id}
+    job_name = f"job-{dispatch_id}-{node_id}"
+    result_filename = f"result-{dispatch_id}-{node_id}.pkl"
+    exception_filename = f"result-{dispatch_id}-{node_id}.pkl"
+
+    gcpbatch_executor.time_limit = 2
+    gcpbatch_executor.poll_freq = 2
+
+    gcpbatch_executor.get_job_state = AsyncMock(return_value="STATE_UNKNOWN")
+    mock_app_log_debug = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.GCPBatchExecutor._debug_log"
+    )
+    mock_asyncio_sleep = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.asyncio.sleep")
+    gcpbatch_executor.get_status = AsyncMock(return_value=True)
+
+    with pytest.raises(TimeoutError):
+        await gcpbatch_executor._poll_task(task_metadata, result_filename, exception_filename)
+
+    assert mock_app_log_debug.call_count == 1
+    mock_asyncio_sleep.assert_awaited_once_with(gcpbatch_executor.poll_freq)
