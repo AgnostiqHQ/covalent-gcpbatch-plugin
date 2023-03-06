@@ -19,23 +19,26 @@ const run = async () => {
     repo: repo,
     ref: `heads/${branch.replace("refs/heads/", "")}`,
   });
+  console.log(`Current commit SHA: ${commit}`)
   const { data: tags } = await octokit.rest.repos.listTags({
     owner: owner,
     repo: repo,
   });
+  console.log(`Tags:`, tags)
   const re = /\d+\.\d+\.\d+(-\d+)*?/;
   let latestTag, i;
   while (latestTag == null) {
     i = 0;
+    console.log(`Current latest tag: ${latestTag}`);
     while (i < tags.length && latestTag == null) {
-      console.log(`Tag name ${tags[i].name} | ${commit}==${tags[i].commit.sha} && ${tags[i].name.match(re)}`)
+      console.log(`Tag name #${i}: ${tags[i].name} | ${commit}==${tags[i].commit.sha} && ${tags[i].name.match(re)}`)
       if (
         commit === tags[i].commit.sha &&
         (!tags[i].name.match("rc") || !stable) &&
         tags[i].name.match(re)
       ){
-        console.log(`Matched latest tag: ${latestTag}`)
         latestTag = tags[i].name;
+        console.log(`Matched latest tag: ${latestTag}`)
       } 
       i++;
     }
@@ -45,12 +48,14 @@ const run = async () => {
         repo: repo,
         ref: commit,
       });
+      console.log(`Commit parents:`, data.parents)
       if (data.parents.length !== 1) {
         core.setFailed(
           "Branch history is not linear. Try squashing your commits."
         );
         return;
       } else {
+        console.log(`Setting a new commit: ${data.parents[0].sha} from commit ${commit}`);
         commit = data.parents[0].sha;
       }
     }
