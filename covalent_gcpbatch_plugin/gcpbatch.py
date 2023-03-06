@@ -45,7 +45,6 @@ _EXECUTOR_PLUGIN_DEFAULTS = {
     "retries": 3,
 }
 
-
 MOUNT_PATH = "/mnt/disks/covalent"
 COVALENT_TASK_FUNC_FILENAME = "func-{dispatch_id}-{node_id}.pkl"
 RESULT_FILENAME = "result-{dispatch_id}-{node_id}.pkl"
