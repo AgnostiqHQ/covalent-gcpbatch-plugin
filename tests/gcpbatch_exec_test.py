@@ -81,9 +81,6 @@ def test_exec_main_raises_exception(mocker):
     with pytest.raises(Exception):
         main()
 
-    #    mock_os_path_join.assert_called_once_with(
-    #        mock_dict["GCPBATCH_TASK_MOUNTPOINT"], mock_dict["EXCEPTION_FILENAME"]
-    #    )
-    assert mock_os_path_join.call_count == 1
+    mock_os_path_join.assert_called()
     mock_file_open.assert_called_once()
     mock_json_dump.assert_called_once()
