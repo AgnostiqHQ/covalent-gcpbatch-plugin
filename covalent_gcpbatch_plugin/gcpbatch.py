@@ -94,6 +94,7 @@ class GCPBatchExecutor(RemoteExecutor):
 
     @staticmethod
     def _get_batch_client() -> batch_v1.BatchServiceAsyncClient:
+    """Retrieve batch client."""
         return batch_v1.BatchServiceAsyncClient()
 
     @staticmethod
