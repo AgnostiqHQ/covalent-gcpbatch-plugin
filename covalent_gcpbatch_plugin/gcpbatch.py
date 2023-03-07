@@ -151,6 +151,10 @@ class GCPBatchExecutor(RemoteExecutor):
         return await fut
 
     def _validate_credentials(self) -> bool:
+    """Method to validate credentials. 
+    
+    TODO - Add full implementation in future phase.
+    """
         return True
 
     def _upload_task_sync(self, func_filename: str) -> None:
