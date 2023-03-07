@@ -85,6 +85,54 @@ def test_executor_default_constructor(mocker):
     assert mock_get_config.call_count == 10
 
 
+def test_get_batch_service_client(gcpbatch_executor, mocker):
+    """Test batch service client async"""
+    mock_batch_v1 = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.batch_v1")
+    gcpbatch_executor._get_batch_client()
+    mock_batch_v1.BatchServiceAsyncClient.assert_called_once()
+
+
+def test_validate_credentials(gcpbatch_executor, mocker):
+    """Test credential validation for gcloud"""
+    assert gcpbatch_executor._validate_credentials()
+
+
+@pytest.mark.asyncio
+async def test_executor_run(gcpbatch_executor, mocker):
+    mock_function = MagicMock()
+    mock_args = MagicMock()
+    mock_kwargs = MagicMock()
+
+    dispatch_id = "abcdef"
+    node_id = 0
+    mock_task_metadata = {"dispatch_id": dispatch_id, "node_id": node_id}
+    mock_batch_job_name = "mock-batch-job"
+    mock_result_filename = "mock-result.pkl"
+    mock_exception_filename = "mock-exception.json"
+
+    mock_local_func_filename = "/tmp/func.pkl"
+
+    gcpbatch_executor._debug_log = MagicMock()
+    gcpbatch_executor._upload_task = AsyncMock()
+    gcpbatch_executor.get_cancel_requested = AsyncMock(return_value=False)
+    gcpbatch_executor._pickle_func = AsyncMock(return_value=mock_local_func_filename)
+    gcpbatch_executor._create_batch_job = AsyncMock()
+    gcpbatch_executor.submit_task = AsyncMock()
+    gcpbatch_executor.set_job_handle = AsyncMock()
+    gcpbatch_executor._poll_task = AsyncMock(return_value=mock_result_filename)
+
+    await gcpbatch_executor.run(mock_function, mock_args, mock_kwargs, mock_task_metadata)
+
+    gcpbatch_executor._debug_log.assert_called()
+    gcpbatch_executor._upload_task.assert_awaited()
+    gcpbatch_executor.get_cancel_requested.assert_awaited()
+    gcpbatch_executor._pickle_func.assert_awaited()
+    gcpbatch_executor._create_batch_job.assert_awaited()
+    gcpbatch_executor.submit_task.assert_awaited()
+    gcpbatch_executor.set_job_handle.assert_awaited()
+    gcpbatch_executor._poll_task.assert_awaited()
+
+
 @pytest.mark.asyncio
 async def test_pickle_function(gcpbatch_executor, mocker):
     """

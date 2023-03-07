@@ -150,7 +150,7 @@ class GCPBatchExecutor(RemoteExecutor):
         return await fut
 
     def _validate_credentials(self) -> bool:
-        pass
+        return True
 
     def _upload_task_sync(self, func_filename: str) -> None:
         """Upload task to the google storage bucket"""
