@@ -53,7 +53,25 @@ BATCH_JOB_NAME = "job-{dispatch_id}-{node_id}"
 
 
 class GCPBatchExecutor(RemoteExecutor):
-    """Google Batch Executor"""
+    """
+    Google Batch Executor
+
+    Arg(s)
+        bucket_name: Google storage bucket name to hold all the intermediate objects
+        container_image_uri: Container image that gets executed by the job
+        service_account_email: Service account email address that gets used by the job when executing
+        project_id: Google project ID
+        region: Google region
+        vcpus: Number of virtual CPU cores needed by the job
+        memory: Memory requirement for the job in (MB)a
+        time_limit: Number of seconds to wait before the job is considered to have failed
+        poll_freq: Frequency with which the poll the bucket and job for results
+        retries: Number of times to retry if a job fails
+        cache_dir: Path to a local directory where the temporary files get stored
+
+    Return(s)
+        None
+    """
 
     def __init__(
         self,
@@ -254,6 +272,17 @@ class GCPBatchExecutor(RemoteExecutor):
         return await fut
 
     async def submit_task(self, dispatch_id: str, node_id: int, batch_job: batch_v1.Job) -> Any:
+        """
+        Submit a batch job to Google for execution
+
+        Arg(s)
+            dispatch_id: Dispatch ID of the workflow
+            node_id: ID of the node in the lattice
+            batch_job: A Google batch Job object
+
+        Return(s)
+            Google Batch job create response
+        """
         batch_client = self._get_batch_client()
 
         create_request = batch_v1.CreateJobRequest()
@@ -263,8 +292,16 @@ class GCPBatchExecutor(RemoteExecutor):
 
         return await batch_client.create_job(create_request)
 
-    async def get_job_state(self, job_name: str) -> Any:
-        """Get the job's state"""
+    async def get_job_state(self, job_name: str) -> str:
+        """
+        Get the job's state
+
+        Arg(s)
+            job_name: Name of the batch job
+
+        Return(s):
+           job_state_name: String representing the state of the batch job
+        """
         batch_client = self._get_batch_client()
         job_description = await batch_client.get_job(
             name=f"projects/{self.project_id}/locations/{self.region}/jobs/{job_name}"
@@ -272,6 +309,18 @@ class GCPBatchExecutor(RemoteExecutor):
         return job_description.status.state.name
 
     async def run(self, function: Callable, args: List, kwargs: Dict, task_metadata: Dict) -> Any:
+        """
+        Run the task by the executor
+
+        Arg(s)
+            function: Callable that represents the electron's computation
+            args: Positional arguments for the function
+            kwargs: Keyword arguments for the function
+            task_metadata: Dictionary containing the dispatch and node id for the task
+
+        Return(s)
+            Result object
+        """
         dispatch_id = task_metadata["dispatch_id"]
         node_id = task_metadata["node_id"]
         batch_job_name = BATCH_JOB_NAME.format(dispatch_id=dispatch_id, node_id=node_id)
