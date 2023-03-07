@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Changed
+
+- Get latest tag step in the test workflow.
+
 ## [0.4.0] - 2023-03-06
 
 ### Changed
