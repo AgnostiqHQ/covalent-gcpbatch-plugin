@@ -26,8 +26,9 @@ ARG COVALENT_TASK_ROOT=/usr/src
 ARG COVALENT_PACKAGE_VERSION
 ARG PRE_RELEASE
 
+COPY requirements.txt requirements.txt
 RUN apt-get update && \
-		pip install 'google-cloud-batch==0.9.0' 'google-cloud-storage==2.7.0'
+		pip install -r requirements.txt
 
 
 RUN if [ -z "$PRE_RELEASE" ]; then \
