@@ -99,6 +99,7 @@ def test_validate_credentials(gcpbatch_executor, mocker):
 
 @pytest.mark.asyncio
 async def test_executor_run(gcpbatch_executor, mocker):
+    """Test executor run"""
     mock_function = MagicMock()
     mock_args = MagicMock()
     mock_kwargs = MagicMock()
@@ -131,6 +132,57 @@ async def test_executor_run(gcpbatch_executor, mocker):
     gcpbatch_executor.submit_task.assert_awaited()
     gcpbatch_executor.set_job_handle.assert_awaited()
     gcpbatch_executor._poll_task.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_executor_run_task_cancelled_when_pickling_func(gcpbatch_executor, mocker):
+    """Test task cancelled error is raised when pickling the function"""
+    mock_function = MagicMock()
+    mock_args = MagicMock()
+    mock_kwargs = MagicMock()
+
+    dispatch_id = "abcdef"
+    node_id = 0
+    mock_task_metadata = {"dispatch_id": dispatch_id, "node_id": node_id}
+    mock_batch_job_name = "mock-batch-job"
+    mock_result_filename = "mock-result.pkl"
+    mock_exception_filename = "mock-exception.json"
+
+    mock_local_func_filename = "/tmp/func.pkl"
+
+    gcpbatch_executor._debug_log = MagicMock()
+    gcpbatch_executor._upload_task = AsyncMock()
+    gcpbatch_executor.get_cancel_requested = AsyncMock(return_value=True)
+
+    with pytest.raises(TaskCancelledError):
+        await gcpbatch_executor.run(mock_function, mock_args, mock_kwargs, mock_task_metadata)
+
+    gcpbatch_executor._debug_log.assert_called_once_with(f"TASK CANCELLED")
+
+
+@pytest.mark.asyncio
+async def test_upload_task_exception_handling(gcpbatch_executor, mocker):
+    """Test exception handling when uploading task to bucket"""
+    mock_func_filename = "func.pkl"
+    mock_app_log_exception = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.app_log.exception")
+    mock_storage_client = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.storage.Client", return_value=MagicMock()
+    )
+
+    mock_blob = mock_storage_client.return_value.bucket.return_value.blob.return_value
+    mock_blob.upload_from_filename = MagicMock(side_effect=Exception("error"))
+
+    with pytest.raises(Exception):
+        await gcpbatch_executor._upload_task(mock_func_filename)
+
+    mock_storage_client.assert_called_once()
+    mock_storage_client.return_value.bucket.assert_called_once_with(gcpbatch_executor.bucket_name)
+    mock_storage_client.return_value.bucket.return_value.blob.assert_called_once_with(
+        mock_func_filename
+    )
+    mock_app_log_exception.assert_called_once_with(
+        f"Failed to upload func.pkl to {gcpbatch_executor.bucket_name}"
+    )
 
 
 @pytest.mark.asyncio
