@@ -30,7 +30,7 @@ from typing import Callable, Dict, Optional, List, Any
 from covalent.executor.executor_plugins.remote_executor import RemoteExecutor
 from covalent._shared_files.exceptions import TaskCancelledError
 
-executor_plugin_name = "GCPBatchExecutor"
+EXECUTOR_PLUGIN_NAME = "GCPBatchExecutor"
 
 _EXECUTOR_PLUGIN_DEFAULTS = {
     "bucket_name": "",
