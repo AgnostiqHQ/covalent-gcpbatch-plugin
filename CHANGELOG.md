@@ -9,15 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial implementation of the `GCPBatchExecutor`
-- Adding tests to improve code coverage
+- Base implementation of the `GCPBatchExecutor`
+- Adding unit tests for the executor and its container entrypoint
 
 ## [0.4.0] - 2023-03-06
 
 ### Changed
 
 - Changelog workflow (to not use reusable action and postpone that for later).
-
 
 ## [0.3.0-rc.0] - 2023-03-01
 
