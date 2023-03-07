@@ -394,7 +394,6 @@ async def test_poll_task_not_listed_state(gcpbatch_executor, mocker):
     dispatch_id = "abcdef"
     node_id = 0
     task_metadata = {"dispatch_id": dispatch_id, "node_id": node_id}
-    job_name = f"job-{dispatch_id}-{node_id}"
     result_filename = f"result-{dispatch_id}-{node_id}.pkl"
     exception_filename = f"result-{dispatch_id}-{node_id}.pkl"
 
@@ -413,3 +412,131 @@ async def test_poll_task_not_listed_state(gcpbatch_executor, mocker):
 
     assert mock_app_log_debug.call_count == 1
     mock_asyncio_sleep.assert_awaited_once_with(gcpbatch_executor.poll_freq)
+
+
+@pytest.mark.asyncio
+async def test_download_blob_to_file_no_exception(gcpbatch_executor, mocker):
+    """Test downloading blob from bucket to file"""
+    local_blob_filename = "/tmp/blob"
+    mock_os_path_join = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.os.path.join", return_value=local_blob_filename
+    )
+    mock_storage_client = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.storage.Client", return_value=MagicMock()
+    )
+
+    await gcpbatch_executor._download_blob_to_file(gcpbatch_executor.bucket_name, "blob")
+
+    mock_os_path_join.assert_called_once_with(gcpbatch_executor.cache_dir, "blob")
+    mock_storage_client.assert_called()
+    mock_storage_client.return_value.bucket.assert_called_once_with(gcpbatch_executor.bucket_name)
+    mock_storage_client.return_value.bucket.return_value.blob.assert_called_once_with("blob")
+    mock_storage_client.return_value.bucket.return_value.blob.return_value.download_to_filename.assert_called_once_with(
+        local_blob_filename
+    )
+
+
+@pytest.mark.asyncio
+async def test_download_blob_to_file_exception(gcpbatch_executor, mocker):
+    """Test exception handling when its raised when downloading the blob from bucket"""
+    mock_app_log_debug = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.GCPBatchExecutor._debug_log"
+    )
+    mock_os_path_join = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.os.path.join", return_value="/tmp/blob"
+    )
+    mock_storage_client = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.storage.Client", side_effect=Exception("error")
+    )
+
+    with pytest.raises(Exception) as ex:
+        await gcpbatch_executor._download_blob_to_file(gcpbatch_executor.bucket_name, "blob")
+
+    mock_app_log_debug.assert_called_once()
+    mock_os_path_join.assert_called_once_with(gcpbatch_executor.cache_dir, "blob")
+    mock_storage_client.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_query_task_exception_raising_exception(gcpbatch_executor, mocker):
+    """Test exception handling when querying task exception"""
+    exception_filename = "exception.json"
+    mock_app_log_debug = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.GCPBatchExecutor._debug_log"
+    )
+    gcpbatch_executor._download_blob_to_file = AsyncMock(side_effect=Exception("error"))
+
+    with pytest.raises(Exception):
+        await gcpbatch_executor.query_task_exception(exception_filename)
+
+    mock_app_log_debug.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_query_task_exception(gcpbatch_executor, mocker):
+    """Testing querying exception file from bucket"""
+    exception_filename = "exception.json"
+    gcpbatch_executor._download_blob_to_file = AsyncMock(return_value=exception_filename)
+    mock_file_open = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.open")
+    mock_json_load = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.json.load")
+
+    res = await gcpbatch_executor.query_task_exception(exception_filename)
+    gcpbatch_executor._download_blob_to_file.assert_called_once_with(
+        gcpbatch_executor.bucket_name, exception_filename
+    )
+    mock_json_load.assert_called_once()
+    mock_file_open.assert_called_once_with(exception_filename, "r")
+
+    assert res == mock_json_load.return_value
+
+
+@pytest.mark.asyncio
+async def test_query_result_raises_exception(gcpbatch_executor, mocker):
+    """Test exception handling when querying task result raises an exception"""
+    result_filename = "result.pkl"
+    gcpbatch_executor._download_blob_to_file = AsyncMock(side_effect=Exception("error"))
+    with pytest.raises(Exception):
+        await gcpbatch_executor.query_result(result_filename)
+
+    gcpbatch_executor._download_blob_to_file.assert_called_once_with(
+        gcpbatch_executor.bucket_name, result_filename
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_result(gcpbatch_executor, mocker):
+    """Test querying result of the task"""
+    result = 0
+    result_filename = "result.pkl"
+    gcpbatch_executor._download_blob_to_file = AsyncMock(return_value=result_filename)
+    mock_file_open = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.open")
+    mock_pickle_load = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.pickle.load", return_value=result
+    )
+
+    res = await gcpbatch_executor.query_result(result_filename)
+
+    gcpbatch_executor._download_blob_to_file.assert_awaited_once_with(
+        gcpbatch_executor.bucket_name, result_filename
+    )
+    mock_file_open.assert_called_once_with(result_filename, "rb")
+    mock_pickle_load.assert_called_once()
+    assert res == result
+
+
+@pytest.mark.asyncio
+async def test_cancel(gcpbatch_executor, mocker):
+    """Test task cancellation"""
+    dispatch_id = "abcdef"
+    node_id = 0
+    job_handle = "batch_job"
+    mock_get_batch_client = mocker.patch(
+        "covalent_gcpbatch_plugin.gcpbatch.GCPBatchExecutor._get_batch_client",
+        return_value=AsyncMock(),
+    )
+
+    await gcpbatch_executor.cancel({"dispatch_id": dispatch_id, "node_id": node_id}, job_handle)
+    mock_get_batch_client.assert_called_once()
+    mock_get_batch_client.return_value.delete_job.assert_awaited_once_with(
+        name=f"projects/{gcpbatch_executor.project_id}/locations/{gcpbatch_executor.region}/jobs/{job_handle}"
+    )
