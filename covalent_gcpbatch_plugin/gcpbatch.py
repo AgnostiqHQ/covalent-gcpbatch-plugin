@@ -112,6 +112,7 @@ class GCPBatchExecutor(RemoteExecutor):
 
     @staticmethod
     def _get_batch_client() -> batch_v1.BatchServiceAsyncClient:
+    """Retrieve batch client."""
         return batch_v1.BatchServiceAsyncClient()
 
     @staticmethod
@@ -168,6 +169,10 @@ class GCPBatchExecutor(RemoteExecutor):
         return await fut
 
     def _validate_credentials(self) -> bool:
+    """Method to validate credentials. 
+    
+    TODO - Add full implementation in future phase.
+    """
         return True
 
     def _upload_task_sync(self, func_filename: str) -> None:
