@@ -33,16 +33,12 @@ with open("VERSION") as f:
 with open("requirements.txt") as f:
     required = f.read().splitlines()
 
-# Modify this to be the name of your plugin file. Here, "covalent_gcpbatch_plugin"
-# is the name of the directory the plugin is in. "custom" is name of the module.
 plugins_list = ["gcpbatch = covalent_gcpbatch_plugin.gcpbatch"]
 
 setup_info = {
-    # Your plugin should use the naming convention 'covalent-abcdef-plugin'
     "name": "covalent-gcpbatch-plugin",
     "packages": find_packages("."),
     "version": version,
-    # Modify any contact information as you see fit
     "maintainer": "Agnostiq",
     "url": "https://github.com/AgnostiqHQ/covalent-gcpbatch-plugin",
     "download_url": f"https://github.com/AgnostiqHQ/covalent-gcpbatch-plugin/archive/v{version}.tar.gz",
