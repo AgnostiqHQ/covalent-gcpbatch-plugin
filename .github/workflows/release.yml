@@ -47,6 +47,7 @@ env:
     '"FyzHsn",'
     '"wjcunningham7",'
     '"santoshkumarradha"]'
+
 jobs:
   github:
     runs-on: ubuntu-latest
@@ -140,6 +141,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install twine
+
       - name: Build Prerelease Distribution
         if: inputs.prerelease
         id: pre-build
@@ -169,6 +171,7 @@ jobs:
           tar xzf covalent-gcpbatch-plugin-${VERSION}.tar.gz
           diff -r covalent-gcpbatch-plugin-${VERSION}/covalent_gcpbatch_plugin ../covalent_gcpbatch_plugin
           rm -rf covalent-gcpbatch-plugin-${VERSION}/
+
       - name: Upload Distribution
         if: >
           false
