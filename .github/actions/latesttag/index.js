@@ -77,6 +77,9 @@ async function legacyAction() {
       owner: owner,
       repo: repo,
     });
+
+    console.log('Fetched Tags:', tags.map(({name})=>name));
+
     const re = /\d+\.\d+\.\d+(-\d+)*?/;
     let latestTag, i;
     while (latestTag == null) {
@@ -86,8 +89,10 @@ async function legacyAction() {
           commit === tags[i].commit.sha &&
           (!tags[i].name.match("rc") || !stable) &&
           tags[i].name.match(re)
-        )
-          latestTag = tags[i].name;
+        ){
+            latestTag = tags[i].name;
+            console.log(`Resolved latest tag: ${latestTag}`)
+        }
         i++;
       }
       if (latestTag == null) {
@@ -96,6 +101,7 @@ async function legacyAction() {
           repo: repo,
           ref: commit,
         });
+        console.log(`Got parents of current commit ${commit}`, data.parents)
         if (data.parents.length !== 1) {
           core.setFailed(
             "Branch history is not linear. Try squashing your commits."
@@ -103,6 +109,7 @@ async function legacyAction() {
           return;
         } else {
           commit = data.parents[0].sha;
+          console.log(`Setting new commit to be fist parent: ${commit}`)
         }
       }
     }

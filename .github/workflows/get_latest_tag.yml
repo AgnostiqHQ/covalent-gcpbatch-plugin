@@ -39,3 +39,4 @@ jobs:
           token: ${{ secrets.COVALENT_OPS_BOT_TOKEN }}
           branch: develop
           stable: false
+          legacy: true
