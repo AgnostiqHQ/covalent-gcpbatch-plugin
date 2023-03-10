@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+## [0.7.1] - 2023-03-10
+
+### Authors
+
+- Venkat Bala <venkat@agnostiq.ai>
+- Faiyaz Hasan <faiyaz@agnostiq.ai>
+- Venkat Bala <15014089+venkatBala@users.noreply.github.com>
+- Alejandro Esquivel <ae@alejandro.ltd>
+- Venkat Bala <balavk89@gmail.com>
+
+
 ### Fixed
 
 - Fixed parsing of rc suffix flag in changelog action
