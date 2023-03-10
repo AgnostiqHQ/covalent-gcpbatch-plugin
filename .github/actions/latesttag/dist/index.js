@@ -9803,21 +9803,26 @@ const core = __nccwpck_require__(2186);
 
     const octokit = github.getOctokit(tokenInput);
     
-    let isStable
+    let isStable = stableInput === "true"
 
     if(typeof stableInput !=='string' || !["true","false"].includes(stableInput)){
         throw new Error('There is an error in the stable input');
     }
-    else {
-       isStable = stableInput === "true"
-    }
 
-    const response = await octokit.rest.repos.listTags({
+    const { data: tags } = await octokit.rest.repos.listTags({
         owner: owner,
         repo: repo,
     });
 
-    console.log('tags response',response)
+    const SEMVER_RE = /^v?([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?$/i;
+
+    const latestTag = tags.find(({ name }) => {
+        return tag.match(SEMVER_RE);
+    })
+
+    console.log('tags',tags)
+    console.log('latest tag: ', latestTag)
+
 })().catch(error => {
     core.setFailed(error.message);
 });
