@@ -79,7 +79,7 @@ ipython_config.py
 build/
 develop-eggs/
 dist/
-!.github/actions/latesttag/dist
+!.github/actions/*/dist
 downloads/
 eggs/
 .eggs/
