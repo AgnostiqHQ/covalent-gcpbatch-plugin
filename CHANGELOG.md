@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Updated changelog to use reusable actions
+- Fixed changelog workflow by adding npm modules in build
 
 ## [0.5.0] - 2023-03-07
 
