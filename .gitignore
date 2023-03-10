@@ -118,5 +118,5 @@ ipython_config.py
 # Coverage
 .coverage
 
-!.github/actions/describe/dist
+!.github/actions/latesttag/dist
 node_modules/
