@@ -124,7 +124,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - id: get-latest-tag
-        uses: AgnostiqHQ/covalent/.github/actions/describe@develop
+        uses: ./.github/actions/latesttag
         with:
           token: ${{ secrets.COVALENT_OPS_BOT_TOKEN }}
           branch: develop

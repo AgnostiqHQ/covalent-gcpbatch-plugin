@@ -1,6 +1,10 @@
 name: "Get Latest Tag"
 description: "This action returns the latest tag on a branch."
 inputs:
+  legacy:
+    description: "Flag to determine if old describe action should be used instead."
+    required: true
+    default: false
   token:
     description: "GitHub token to authenticate API requests."
     required: true

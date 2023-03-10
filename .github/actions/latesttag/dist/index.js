@@ -9794,16 +9794,27 @@ const core = __nccwpck_require__(2186);
 
 // new action
 (async()=>{
+    const tokenInput = core.getInput("token");
+    const stableInput = core.getInput("stable");
+    const legacyInput = core.getInput("legacy");
+
+    let isStable = stableInput === "true"
+    let isLegacy = legacyInput === "true"
 
     const { owner ,repo } = github.context.repo
 
-    const tokenInput = core.getInput("token");
-    const branchInput = core.getInput("branch");
-    const stableInput = core.getInput("stable");
+    if(typeof stableInput !=='string' || !["true","false"].includes(stableInput)){
+        throw new Error(`There is an error in the provided stable input: ${stableInput}`);
+    }
+    if(typeof legacyInput !=='string' || !["true","false"].includes(legacyInput)){
+        throw new Error(`There is an error in the provided legacy input: ${legacyInput}`);
+    }
+    
+    if(isLegacy){
+        return legacyAction();
+    }
 
     const octokit = github.getOctokit(tokenInput);
-    
-    let isStable = stableInput === "true"
 
     if(typeof stableInput !=='string' || !["true","false"].includes(stableInput)){
         throw new Error('There is an error in the stable input');
@@ -9814,14 +9825,20 @@ const core = __nccwpck_require__(2186);
         repo: repo,
     });
 
+    console.log('Fetched Tags:', tags.map(({name})=>name));
+
     const SEMVER_RE = /^v?([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?$/i;
 
     const latestTag = tags.find(({ name }) => {
-        return name.match(SEMVER_RE);
-    })
+        return name.match(SEMVER_RE) && !(tags[i].name.match("rc") && isStable)
+    });
 
-    console.log('tags',tags)
-    console.log('latest tag: ', latestTag)
+    if(!latestTag || !latestTag?.name){
+        throw new Error("The action couldn't find a matching recent tag. Did you create your branch from a release tag?")
+    }
+
+    console.log('Latest Tag',latestTag)
+    core.setOutput("tag", latestTag.name);
 
 })().catch(error => {
     core.setFailed(error.message);
@@ -9829,7 +9846,7 @@ const core = __nccwpck_require__(2186);
 
 // old action
 
-async function oldAction() {
+async function legacyAction() {
     const token = core.getInput("token");
     const branch = core.getInput("branch");
     let stable = core.getInput("stable");
