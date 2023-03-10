@@ -79,6 +79,7 @@ ipython_config.py
 build/
 develop-eggs/
 dist/
+!.github/actions/*/dist
 downloads/
 eggs/
 .eggs/
@@ -126,5 +127,4 @@ ipython_config.py
 *.json
 tags
 scratch
-!.github/actions/describe/dist
 node_modules/

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Added
+
+- Added modified describe & changelog reusable actions
+
+### Changed
+
+- Updated changelog to use reusable actions
+
 ## [0.5.0] - 2023-03-07
 
 ### Added

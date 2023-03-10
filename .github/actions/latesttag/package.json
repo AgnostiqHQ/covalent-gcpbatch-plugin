@@ -1,0 +1,21 @@
+{
+    "name": "latesttag",
+    "version": "0.1.0",
+    "description": "Get the latest tag associated with the last release from the current commit",
+    "main": "index.js",
+    "scripts": {
+      "build": "ncc build index.js --license licenses.txt"
+    },
+    "keywords": [],
+    "author": "Alejandro Esquivel <alejandro@agnostiq.ai> (http://covalent.xyz)",
+    "license": "AGPL-3.0-only",
+    "dependencies": {
+      "@actions/core": "^1.9.1",
+      "@actions/github": "^5.0.3",
+      "semver": "^7.3.8"
+    },
+    "devDependencies": {
+      "@vercel/ncc": "^0.34.0"
+    }
+  }
+  
