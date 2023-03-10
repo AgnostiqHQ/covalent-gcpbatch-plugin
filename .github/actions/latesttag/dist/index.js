@@ -9792,6 +9792,7 @@ var __webpack_exports__ = {};
 const github = __nccwpck_require__(5438);
 const core = __nccwpck_require__(2186);
 
+// new action
 (async()=>{
 
     const { owner ,repo } = github.context.repo
@@ -9800,7 +9801,7 @@ const core = __nccwpck_require__(2186);
     const branchInput = core.getInput("branch");
     const stableInput = core.getInput("stable");
 
-    const octokit = github.getOctokit(token);
+    const octokit = github.getOctokit(tokenInput);
     
     let isStable
 
@@ -9811,15 +9812,17 @@ const core = __nccwpck_require__(2186);
        isStable = stableInput === "true"
     }
 
-    const { data: tags } = await octokit.rest.repos.listTags({
+    const response = await octokit.rest.repos.listTags({
         owner: owner,
         repo: repo,
-      });
+    });
 
-    console.log('tags',tags)
+    console.log('tags response',response)
 })().catch(error => {
     core.setFailed(error.message);
 });
+
+// old commit
 
 })();
 

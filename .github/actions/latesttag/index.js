@@ -10,7 +10,7 @@ const core = require("@actions/core");
     const branchInput = core.getInput("branch");
     const stableInput = core.getInput("stable");
 
-    const octokit = github.getOctokit(token);
+    const octokit = github.getOctokit(tokenInput);
     
     let isStable
 
