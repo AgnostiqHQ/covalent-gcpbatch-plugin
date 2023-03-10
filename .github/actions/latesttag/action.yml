@@ -4,7 +4,7 @@ inputs:
   legacy:
     description: "Flag to determine if old describe action should be used instead."
     required: true
-    default: false
+    default: true
   token:
     description: "GitHub token to authenticate API requests."
     required: true

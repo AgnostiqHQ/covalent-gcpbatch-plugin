@@ -53,8 +53,7 @@ const core = require("@actions/core");
     core.setFailed(error.message);
 });
 
-// old action
-
+// legacy action
 async function legacyAction() {
     const token = core.getInput("token");
     const branch = core.getInput("branch");

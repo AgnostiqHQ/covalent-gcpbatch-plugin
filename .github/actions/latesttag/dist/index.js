@@ -9844,8 +9844,7 @@ const core = __nccwpck_require__(2186);
     core.setFailed(error.message);
 });
 
-// old action
-
+// legacy action
 async function legacyAction() {
     const token = core.getInput("token");
     const branch = core.getInput("branch");
