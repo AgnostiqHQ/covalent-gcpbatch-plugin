@@ -79,6 +79,7 @@ ipython_config.py
 build/
 develop-eggs/
 dist/
+!.github/actions/latesttag/dist
 downloads/
 eggs/
 .eggs/
@@ -118,5 +119,12 @@ ipython_config.py
 # Coverage
 .coverage
 
-!.github/actions/latesttag/dist
+*.terraform
+*.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.plan
+*.json
+tags
+scratch
 node_modules/
