@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Fixed
+
+- Fixed parsing of rc suffix flag in changelog action
+
 ## [0.7.0-rc.0] - 2023-03-10
 
 ### Authors

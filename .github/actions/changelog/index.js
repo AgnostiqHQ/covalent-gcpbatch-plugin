@@ -34,7 +34,7 @@ const get_author = (commit, authors) => {
 };
 
 try {
-  const useRcSuffix = core.getInput("rc-suffix")
+  const useRcSuffix = core.getInput("rc-suffix") === "true"
   const token = core.getInput("token");
   const head_version = fs
     .readFileSync(core.getInput("version-path"), "utf8")
