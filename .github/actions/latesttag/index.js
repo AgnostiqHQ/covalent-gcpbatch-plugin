@@ -39,7 +39,7 @@ const core = require("@actions/core");
     const SEMVER_RE = /^v?([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?$/i;
 
     const latestTag = tags.find(({ name }) => {
-        return name.match(SEMVER_RE) && !(tags[i].name.match("rc") && isStable)
+        return name.match(SEMVER_RE) && !(name.match("rc") && isStable)
     });
 
     if(!latestTag || !latestTag?.name){
