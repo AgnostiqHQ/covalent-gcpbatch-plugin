@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Get latest tag step in the test workflow.
 
+## [0.5.0] - 2023-03-07
+
+### Added
+
+- Base implementation of the `GCPBatchExecutor`
+- Adding unit tests for the executor and its container entrypoint
+
 ## [0.4.0] - 2023-03-06
 
 ### Changed

@@ -18,31 +18,31 @@
 #
 # Relief from the License may be granted by purchasing a commercial license.
 
-import covalent as ct
-import pytest
+ARG COVALENT_BASE_IMAGE=python:3.8-slim-buster
+FROM ${COVALENT_BASE_IMAGE}
+
+# Install dependencies
+ARG COVALENT_TASK_ROOT=/usr/src
+ARG COVALENT_PACKAGE_VERSION
+ARG PRE_RELEASE
+
+COPY requirements.txt requirements.txt
+RUN apt-get update && \
+		pip install -r requirements.txt
 
 
-@pytest.mark.skip(reason="Executor has not yet been implemented.")
-@pytest.mark.functional_tests
-def test_basic_workflow():
-    @ct.electron(executor="gcpbatch")
-    def join_words(a, b):
-        return ", ".join([a, b])
+RUN if [ -z "$PRE_RELEASE" ]; then \
+		pip install "$COVALENT_PACKAGE_VERSION"; else \
+		pip install --pre "$COVALENT_PACKAGE_VERSION"; \
+	fi
 
-    @ct.electron
-    def excitement(a):
-        return f"{a}!"
 
-    @ct.lattice
-    def basic_workflow(a, b):
-        phrase = join_words(a, b)
-        return excitement(phrase)
+COPY covalent_gcpbatch_plugin/exec.py ${COVALENT_TASK_ROOT}
 
-    # Dispatch the workflow
-    dispatch_id = ct.dispatch(basic_workflow)("Hello", "World")
-    result = ct.get_result(dispatch_id=dispatch_id, wait=True)
-    status = str(result.status)
+WORKDIR ${COVALENT_TASK_ROOT}
+ENV PYTHONPATH ${COVALENT_TASK_ROOT}:${PYTHONPATH}
 
-    print(result)
+# Path where the storage bucket will be mounted inside the container
+ENV GCPBATCH_TASK_MOUNTPOINT /mnt/disks/covalent
 
-    assert status == str(ct.status.COMPLETED)
+ENTRYPOINT [ "python", "exec.py" ]

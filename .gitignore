@@ -118,5 +118,13 @@ ipython_config.py
 # Coverage
 .coverage
 
+*.terraform
+*.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.plan
+*.json
+tags
+scratch
 !.github/actions/describe/dist
 node_modules/
