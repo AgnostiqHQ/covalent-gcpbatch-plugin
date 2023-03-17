@@ -28,10 +28,11 @@ def test_exec_main(mocker):
     mock_dict = {
         "COVALENT_TASK_FUNC_FILENAME": "func.pkl",
         "RESULT_FILENAME": "result.pkl",
-        "GCPBATCH_TASK_MOUNTPOINT": "/mnt/disks/covalent",
+        "BUCKET_NAME": "test_bucket",
     }
     mocker.patch.dict("covalent_gcpbatch_plugin.exec.os.environ", mock_dict)
     mock_os_path_join = mocker.patch("covalent_gcpbatch_plugin.exec.os.path.join")
+    mocker.patch("covalent_gcpbatch_plugin.exec.storage.Client", return_value=MagicMock())
     mock_file_open = mocker.patch("covalent_gcpbatch_plugin.exec.open")
     mock_pickle_load = mocker.patch(
         "covalent_gcpbatch_plugin.exec.pickle.load",
@@ -59,14 +60,9 @@ def test_exec_main(mocker):
 def test_exec_main_raises_exception(mocker):
     """Test main raising execption while executing task"""
     mock_json_dump = mocker.patch("covalent_gcpbatch_plugin.exec.json.dump")
-    mock_dict = {
-        "EXCEPTION_FILENAME": "exception.json",
-        "GCPBATCH_TASK_MOUNTPOINT": "/mnt/disks/covalent",
-    }
+    mock_dict = {"EXCEPTION_FILENAME": "exception.json", "BUCKET_NAME": "test_bucket"}
     mocker.patch.dict("covalent_gcpbatch_plugin.exec.os.environ", mock_dict)
-    mock_ret_value = (
-        f"{mock_dict['GCPBATCH_TASK_MOUNTPOINT']}/{mock_dict['GCPBATCH_TASK_MOUNTPOINT']}"
-    )
+    mocker.patch("covalent_gcpbatch_plugin.exec.storage.Client", return_value=MagicMock())
     mock_os_path_join = mocker.patch("covalent_gcpbatch_plugin.exec.os.path.join")
     mock_file_open = mocker.patch("covalent_gcpbatch_plugin.exec.open")
     mock_pickle_load = mocker.patch(

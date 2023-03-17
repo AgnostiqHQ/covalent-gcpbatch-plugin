@@ -235,23 +235,18 @@ class GCPBatchExecutor(RemoteExecutor):
         task_spec.runnables.append(runnable)
 
         # Setup task's environment variables
-        function_filename = os.path.join(
-            MOUNT_PATH,
-            COVALENT_TASK_FUNC_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id),
+        function_filename = COVALENT_TASK_FUNC_FILENAME.format(
+            dispatch_id=dispatch_id, node_id=node_id
         )
-        result_filename = os.path.join(
-            MOUNT_PATH, RESULT_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
-        )
-        exception_filename = os.path.join(
-            MOUNT_PATH,
-            EXCEPTION_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id),
-        )
+        result_filename = RESULT_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
+        exception_filename = EXCEPTION_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
 
         task_spec.environment = batch_v1.Environment(
             variables={
                 "COVALENT_TASK_FUNC_FILENAME": function_filename,
                 "RESULT_FILENAME": result_filename,
                 "EXCEPTION_FILENAME": exception_filename,
+                "BUCKET_NAME": self.bucket_name,
             }
         )
 

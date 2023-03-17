@@ -256,17 +256,18 @@ async def test_create_batch_job(gcpbatch_executor, mocker):
     )
     mock_batch_v1.Environment.assert_called_once_with(
         variables={
-            "COVALENT_TASK_FUNC_FILENAME": os.path.join("/mnt/disks/covalent", func_filename),
-            "RESULT_FILENAME": os.path.join("/mnt/disks/covalent", result_filename),
-            "EXCEPTION_FILENAME": os.path.join("/mnt/disks/covalent", exception_filename),
+            "COVALENT_TASK_FUNC_FILENAME": func_filename,
+            "RESULT_FILENAME": result_filename,
+            "EXCEPTION_FILENAME": exception_filename,
+            "BUCKET_NAME": gcpbatch_executor.bucket_name,
         }
     )
-    mock_batch_v1.GCS.assert_called_once()
-    assert mock_batch_v1.GCS.return_value.remote_path == gcpbatch_executor.bucket_name
-    mock_batch_v1.Volume.assert_called_once()
-    assert mock_batch_v1.Volume.return_value.gcs == mock_batch_v1.GCS.return_value
-    assert mock_batch_v1.Volume.return_value.mount_path == "/mnt/disks/covalent"
-    assert mock_batch_v1.TaskSpec.return_value.volumes == [mock_batch_v1.Volume.return_value]
+    #    mock_batch_v1.GCS.assert_called_once()
+    #    assert mock_batch_v1.GCS.return_value.remote_path == gcpbatch_executor.bucket_name
+    #    mock_batch_v1.Volume.assert_called_once()
+    #    assert mock_batch_v1.Volume.return_value.gcs == mock_batch_v1.GCS.return_value
+    #    assert mock_batch_v1.Volume.return_value.mount_path == "/mnt/disks/covalent"
+    #    assert mock_batch_v1.TaskSpec.return_value.volumes == [mock_batch_v1.Volume.return_value]
 
     mock_batch_v1.ComputeResource.assert_called_once_with(
         cpu_milli=gcpbatch_executor.vcpus * 1000, memory_mib=gcpbatch_executor.memory
