@@ -19,6 +19,7 @@
 # Relief from the License may be granted by purchasing a commercial license.
 
 import os
+import sys
 import json
 import asyncio
 import cloudpickle as pickle
@@ -29,8 +30,10 @@ from covalent._shared_files.config import get_config
 from typing import Callable, Dict, Optional, List, Any
 from covalent.executor.executor_plugins.remote_executor import RemoteExecutor
 from covalent._shared_files.exceptions import TaskCancelledError
+from pydantic import BaseModel
 
 EXECUTOR_PLUGIN_NAME = "GCPBatchExecutor"
+
 
 _EXECUTOR_PLUGIN_DEFAULTS = {
     "bucket_name": "",
@@ -44,6 +47,22 @@ _EXECUTOR_PLUGIN_DEFAULTS = {
     "poll_freq": 5,
     "retries": 3,
 }
+
+
+class ExecutorInfraDefaults(BaseModel):
+    """
+    Executor configuration values for deploying infrastructure
+    """
+
+    prefix: str
+    project_id: str
+    vcpus: Optional[int] = 2
+    memory: Optional[float] = 512
+    time_limit: Optional[int] = 300
+    poll_freq: Optional[int] = 5
+    retries: Optional[int] = 3
+    cache_dir: Optional[str] = "/tmp/covalent"
+
 
 MOUNT_PATH = "/mnt/disks/covalent"
 COVALENT_TASK_FUNC_FILENAME = "func-{dispatch_id}-{node_id}.pkl"
@@ -235,14 +254,6 @@ class GCPBatchExecutor(RemoteExecutor):
                 "EXCEPTION_FILENAME": exception_filename,
             }
         )
-
-        # Mount bucket
-        gcs_bucket = batch_v1.GCS()
-        gcs_bucket.remote_path = self.bucket_name
-        gcs_volume = batch_v1.Volume()
-        gcs_volume.gcs = gcs_bucket
-        gcs_volume.mount_path = MOUNT_PATH
-        task_spec.volumes = [gcs_volume]
 
         # Specify task's compute resources
         task_spec.compute_resource = batch_v1.ComputeResource(
