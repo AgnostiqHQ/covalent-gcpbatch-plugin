@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Changed
+
+- Removed mounting storage bucket into the container
+- Revert to downloading the objects using google cloud sdk
+
 ## [0.7.1] - 2023-03-10
 
 ### Authors
