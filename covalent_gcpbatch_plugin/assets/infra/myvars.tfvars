@@ -1,0 +1,4 @@
+access_token="ya29.a0AWY7CklavzHqfvR89txTi2HRLz_lrkiHMl8pHrEWJTcpoj7hKWIr7_p-Mah9B-TE0jL5VBE_RmTslqUqv0bs5z0-HwJ6rz2t9qnswuROpsOVwfmPnj4MzEmoD6Yg3tmjbILeVdgSRELqkIRW2afgiTWDxwLFXbJNAOy3gQaCgYKAVsSARMSFQG1tDrpyaRzxplrnBd7PvwaMcbv8Q0173"
+project_id="covalenttesting"
+covalent_package_version="covalent==0.220.0"
+prefix="faiyaz"

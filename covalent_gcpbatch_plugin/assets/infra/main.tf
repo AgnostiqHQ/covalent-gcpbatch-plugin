@@ -34,27 +34,26 @@ resource random_string sasuffix {
 }
 
 # Create the docker artifact registry
-resource google_artifact_registry_repository covalent {
-  location      = data.google_client_config.current.region
-  repository_id = "covalent"
-  description   = "Covalent Batch executor base images"
-  format        = "DOCKER"
-}
+# resource google_artifact_registry_repository covalent {
+#   location      = data.google_client_config.current.region
+#   repository_id = "covalent"
+#   description   = "Covalent Batch executor base images"
+#   format        = "DOCKER"
+# }
 
 
 resource docker_image base_executor {
   name = local.executor_image_tag
-  build {
-    context = var.context
-    build_args = {
-      "PRE_RELEASE": var.prerelease
-      "COVALENT_PACKAGE_VERSION": var.covalent_package_version
-    }
-    label = {
-      author = "Agnostiq Inc"
-    }
-    platform = "linux/amd64"
-  }
+  # build {
+  #   context = var.context
+  #   build_args = {
+  #     "PRE_RELEASE": var.prerelease
+  #     "COVALENT_PACKAGE_VERSION": var.covalent_package_version
+  #   }
+  #   label = {
+  #     author = "Agnostiq Inc"
+  #   }
+  # }
 }
 
 resource docker_registry_image base_executor {
