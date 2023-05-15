@@ -241,13 +241,17 @@ class GCPBatchExecutor(RemoteExecutor):
         result_filename = RESULT_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
         exception_filename = EXCEPTION_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
 
+        job_env_vars = {
+            "COVALENT_TASK_FUNC_FILENAME": function_filename,
+            "RESULT_FILENAME": result_filename,
+            "EXCEPTION_FILENAME": exception_filename,
+            "COVALENT_BUCKET_NAME": self.bucket_name
+        }
+
+        self._debug_log(f"Environment variables for new batch job {job_env_vars}")
+    
         task_spec.environment = batch_v1.Environment(
-            variables={
-                "COVALENT_TASK_FUNC_FILENAME": function_filename,
-                "RESULT_FILENAME": result_filename,
-                "EXCEPTION_FILENAME": exception_filename,
-                "BUCKET_NAME": self.bucket_name,
-            }
+            variables=job_env_vars
         )
 
         # Specify task's compute resources

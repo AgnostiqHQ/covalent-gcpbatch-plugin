@@ -28,7 +28,7 @@ def test_exec_main(mocker):
     mock_dict = {
         "COVALENT_TASK_FUNC_FILENAME": "func.pkl",
         "RESULT_FILENAME": "result.pkl",
-        "BUCKET_NAME": "test_bucket",
+        "COVALENT_BUCKET_NAME": "test_bucket",
     }
     mocker.patch.dict("covalent_gcpbatch_plugin.exec.os.environ", mock_dict)
     mock_os_path_join = mocker.patch("covalent_gcpbatch_plugin.exec.os.path.join")
@@ -60,7 +60,7 @@ def test_exec_main(mocker):
 def test_exec_main_raises_exception(mocker):
     """Test main raising execption while executing task"""
     mock_json_dump = mocker.patch("covalent_gcpbatch_plugin.exec.json.dump")
-    mock_dict = {"EXCEPTION_FILENAME": "exception.json", "BUCKET_NAME": "test_bucket"}
+    mock_dict = {"EXCEPTION_FILENAME": "exception.json", "COVALENT_BUCKET_NAME": "test_bucket"}
     mocker.patch.dict("covalent_gcpbatch_plugin.exec.os.environ", mock_dict)
     mocker.patch("covalent_gcpbatch_plugin.exec.storage.Client", return_value=MagicMock())
     mock_os_path_join = mocker.patch("covalent_gcpbatch_plugin.exec.os.path.join")

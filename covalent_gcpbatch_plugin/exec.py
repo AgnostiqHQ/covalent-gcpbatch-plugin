@@ -38,9 +38,14 @@ def main() -> None:
         None
     """
     try:
-        func_filename = os.environ["COVALENT_TASK_FUNC_FILENAME"]
-        result_filename = os.environ["RESULT_FILENAME"]
-        bucket_name = os.environ["BUCKET_NAME"]
+        
+        func_filename = os.getenv("COVALENT_TASK_FUNC_FILENAME")
+        result_filename = os.getenv("RESULT_FILENAME")
+        bucket_name = os.getenv("COVALENT_BUCKET_NAME")
+
+        print(f"Function filename: {func_filename}")
+        print(f"Result filename: {result_filename}")
+        print(f"Bucket Name: {bucket_name}")
 
         local_func_filename = os.path.join(CACHE_DIR, func_filename)
         local_result_filename = os.path.join(CACHE_DIR, result_filename)
@@ -71,8 +76,11 @@ def main() -> None:
         result_blob.upload_from_filename(local_result_filename, if_generation_match=0)
 
     except Exception as ex:
-        exception_filename = os.environ["EXCEPTION_FILENAME"]
-        bucket_name = os.environ["BUCKET_NAME"]
+        exception_filename = os.getenv("EXCEPTION_FILENAME")
+        bucket_name = os.getenv("COVALENT_BUCKET_NAME")
+
+        print(f"Exception file name: {exception_filename}")
+        print(f"Bucket Name: {bucket_name}")
 
         # upload exception
         storage_client = storage.Client()
