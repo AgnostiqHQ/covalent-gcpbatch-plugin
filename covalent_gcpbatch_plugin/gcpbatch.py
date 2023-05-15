@@ -19,6 +19,7 @@
 # Relief from the License may be granted by purchasing a commercial license.
 
 import os
+from pathlib import Path
 import sys
 import json
 import asyncio
@@ -173,7 +174,7 @@ class GCPBatchExecutor(RemoteExecutor):
         Pickle the function asynchronously
 
         Arg(s)
-            function: A Python picklable callable
+            function: A Python pickle-able callable
             args: List of function's positional arguments
             kwargs: List of function's keyword arguments
 
@@ -199,7 +200,8 @@ class GCPBatchExecutor(RemoteExecutor):
         self._debug_log(f"Uploading {func_filename} to bucket {self.bucket_name}")
         storage_client = storage.Client()
         bucket = storage_client.bucket(self.bucket_name)
-        blob = bucket.blob(func_filename)
+        # blob = bucket.blob(func_filename)
+        blob = bucket.blob(Path(func_filename).name)
         try:
             blob.upload_from_filename(func_filename, if_generation_match=0)
         except Exception:
