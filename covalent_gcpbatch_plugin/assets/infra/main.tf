@@ -53,6 +53,7 @@ resource docker_image base_executor {
     label = {
       author = "Agnostiq Inc"
     }
+    platform = "linux/amd64"
   }
 }
 
@@ -92,9 +93,9 @@ resource google_project_iam_member log_viewer {
   member = google_service_account.covalent.member
 }
 
-resource google_project_iam_member registry_reader {
+resource google_project_iam_member registry_writer {
   project = var.project_id
-  role = "roles/artifactregistry.reader"
+  role = "roles/artifactregistry.writer"
   member = google_service_account.covalent.member
 }
 
