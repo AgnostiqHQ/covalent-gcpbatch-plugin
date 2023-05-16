@@ -30,7 +30,6 @@ from covalent._shared_files.exceptions import TaskCancelledError
 from covalent._shared_files.logger import app_log
 from covalent.executor.executor_plugins.remote_executor import RemoteExecutor
 from google.cloud import batch_v1, storage
-from google.cloud.batch_v1.types import Job
 from pydantic import BaseModel
 
 EXECUTOR_PLUGIN_NAME = "GCPBatchExecutor"
