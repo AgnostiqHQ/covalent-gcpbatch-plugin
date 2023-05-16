@@ -29,21 +29,28 @@ from numpy.random import permutation
 from sklearn import svm, datasets
 import covalent as ct
 
-from covalent.executor import GCPBatchExecutor
 
 deps_pip = ct.DepsPip(
     packages=["numpy==1.22.4", "scikit-learn==1.1.2"]
 )
 
-executor = GCPBatchExecutor(
-    ...  # Update after implementation
-)
+executor = ct.executor.GCPBatchExecutor(
+    project_id='covalent_gcp_batch',
+    region='us-east1',
+    bucket_name='covalent-storage-bucket',
+    container_image_uri='us-east1-docker.pkg.dev/covalent_gcp_batch_/covalent/covalent-gcpbatch-executor',
+    service_account_email='covalentsaaccount@covalenttesting.iam.gserviceaccount.com',
+    vcpus = 2,  # Number of vCPUs to allocate
+    memory = 512,  # Memory in MB to allocate
+    time_limit = 300,  # Time limit of job in seconds
+    poll_freq = 3,  # Number of seconds to pause before polling for the job's status
+  )
 
 
 # Use executor plugin to train our SVM model
 @ct.electron(
     executor=executor,
-    # deps_pip=deps_pip
+    deps_pip=deps_pip
 )
 def train_svm(data, C, gamma):
     X, y = data
@@ -74,11 +81,10 @@ def run_experiment(C=1.0, gamma=0.7):
 	    C=C,
 	    gamma=gamma
     )
-    score = score_svm(
+    return score_svm(
     	data=data,
 	    clf=clf
     )
-    return score
 
 # Dispatch the workflow.
 dispatch_id = ct.dispatch(run_experiment)(
