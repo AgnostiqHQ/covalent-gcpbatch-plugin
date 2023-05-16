@@ -22,6 +22,9 @@
 import os
 import json
 import cloudpickle as pickle
+from google.cloud import storage
+
+CACHE_DIR = "/tmp"
 
 
 def main() -> None:
@@ -33,32 +36,57 @@ def main() -> None:
 
     Return(s)
         None
+        
     """
     try:
-        func_filename = os.environ["COVALENT_TASK_FUNC_FILENAME"]
-        result_filename = os.environ["RESULT_FILENAME"]
-        task_mountpoint = os.environ["GCPBATCH_TASK_MOUNTPOINT"]
+        
+        func_filename = os.getenv("COVALENT_TASK_FUNC_FILENAME")
+        result_filename = os.getenv("RESULT_FILENAME")
+        bucket_name = os.getenv("COVALENT_BUCKET_NAME")
 
-        local_func_filename = os.path.join(task_mountpoint, func_filename)
-        local_result_filename = os.path.join(task_mountpoint, result_filename)
+        local_func_filename = os.path.join(CACHE_DIR, func_filename)
+        local_result_filename = os.path.join(CACHE_DIR, result_filename)
+
+        # Download function pickle object
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+
+        # Create blobs
+        func_blob = bucket.blob(func_filename)
+        result_blob = bucket.blob(result_filename)
+
+        # download function blob
+        func_blob.download_to_filename(local_func_filename)
 
         # Read the function, args and kwargs from the mount path
         with open(local_func_filename, "rb") as f:
             function, args, kwargs = pickle.load(f)
 
-        result = function(*args, *kwargs)
+        result = function(*args, **kwargs)
 
         # Write the result to the mount path
         with open(local_result_filename, "wb") as f:
             pickle.dump(result, f)
 
+        # upload result blob
+        result_blob = bucket.blob(result_filename)
+        result_blob.upload_from_filename(local_result_filename, if_generation_match=0)
+
     except Exception as ex:
-        task_mountpoint = os.environ["GCPBATCH_TASK_MOUNTPOINT"]
-        exception_filename = os.environ["EXCEPTION_FILENAME"]
-        local_exception_filename = os.path.join(task_mountpoint, exception_filename)
+        exception_filename = os.getenv("EXCEPTION_FILENAME")
+        bucket_name = os.getenv("COVALENT_BUCKET_NAME")
+
+        # upload exception
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+
+        exception_blob = bucket.blob(exception_filename)
+        local_exception_filename = os.path.join(CACHE_DIR, exception_filename)
+
         # Write the exception to the mount path
         with open(local_exception_filename, "w") as f:
             json.dump(str(ex), f)
+        exception_blob.upload_from_filename(local_exception_filename, if_generation_match=0)
         raise
 
 

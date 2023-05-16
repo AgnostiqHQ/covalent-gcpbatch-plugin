@@ -18,32 +18,58 @@
 #
 # Relief from the License may be granted by purchasing a commercial license.
 
-import os
-import json
 import asyncio
+import json
+import os
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
+
 import cloudpickle as pickle
-from google.cloud import batch_v1, storage
-from google.cloud.batch_v1.types import Job
-from covalent._shared_files.logger import app_log
 from covalent._shared_files.config import get_config
-from typing import Callable, Dict, Optional, List, Any
-from covalent.executor.executor_plugins.remote_executor import RemoteExecutor
 from covalent._shared_files.exceptions import TaskCancelledError
+from covalent._shared_files.logger import app_log
+from covalent.executor.executor_plugins.remote_executor import RemoteExecutor
+from google.cloud import batch_v1, storage
+from pydantic import BaseModel
 
 EXECUTOR_PLUGIN_NAME = "GCPBatchExecutor"
 
-_EXECUTOR_PLUGIN_DEFAULTS = {
-    "bucket_name": "",
-    "container_image_uri": "",
-    "service_account_email": "",
-    "project_id": "",
-    "region": "",
-    "vcpus": 2,
-    "memory": 512,
-    "time_limit": 300,
-    "poll_freq": 5,
-    "retries": 3,
-}
+
+class ExecutorPluginDefaults(BaseModel):
+    """
+    Default configuration values for the executor
+    """
+
+    bucket_name: str = ""
+    container_image_uri: str = ""
+    service_account_email: str = ""
+    project_id: str = ""
+    region: str = ""
+    vcpus: int = 2
+    memory: int = 512
+    time_limit: float = 300
+    poll_freq: int = 5
+    retries: int = 3
+    cache_dir: str = "/tmp/covalent"
+
+
+class ExecutorInfraDefaults(BaseModel):
+    """
+    Executor configuration values for deploying infrastructure
+    """
+
+    prefix: str
+    project_id: str
+    vcpus: Optional[int] = 2
+    memory: Optional[float] = 512
+    time_limit: Optional[int] = 300
+    poll_freq: Optional[int] = 5
+    retries: Optional[int] = 3
+    cache_dir: Optional[str] = "/tmp/covalent"
+
+
+_EXECUTOR_PLUGIN_DEFAULTS = ExecutorPluginDefaults().dict()
+
 
 MOUNT_PATH = "/mnt/disks/covalent"
 COVALENT_TASK_FUNC_FILENAME = "func-{dispatch_id}-{node_id}.pkl"
@@ -56,7 +82,7 @@ class GCPBatchExecutor(RemoteExecutor):
     """
     Google Batch Executor
 
-    Arg(s)
+    Args:
         bucket_name: Google storage bucket name to hold all the intermediate objects
         container_image_uri: Container image that gets executed by the job
         service_account_email: Service account email address that gets used by the job when executing
@@ -69,8 +95,9 @@ class GCPBatchExecutor(RemoteExecutor):
         retries: Number of times to retry if a job fails
         cache_dir: Path to a local directory where the temporary files get stored
 
-    Return(s)
+    Returns:
         None
+
     """
 
     def __init__(
@@ -101,7 +128,9 @@ class GCPBatchExecutor(RemoteExecutor):
         self.time_limit = time_limit or int(get_config("executors.gcpbatch.time_limit"))
         self.poll_freq = poll_freq or int(get_config("executors.gcpbatch.poll_freq"))
         self.retries = retries or int(get_config("executors.gcpbatch.retries"))
-        self.cache_dir = cache_dir
+
+        self.cache_dir = cache_dir or get_config("executors.gcpbatch.cache_dir")
+        Path(self.cache_dir).mkdir(parents=True, exist_ok=True)
 
         super().__init__(
             poll_freq=self.poll_freq,
@@ -113,26 +142,29 @@ class GCPBatchExecutor(RemoteExecutor):
     @staticmethod
     def _get_batch_client() -> batch_v1.BatchServiceAsyncClient:
         """Retrieve batch client."""
+
         return batch_v1.BatchServiceAsyncClient()
 
     @staticmethod
     def _debug_log(msg: str) -> None:
         """Write a debug log message to log file"""
+
         app_log.debug(f"[GCPBatchExecutor] | {msg}")
 
     def _pickle_func_sync(
         self, function: Callable, args: List, kwargs: List, task_metadata: Dict
     ) -> str:
         """
-        Pickle the function synchronously
+        Pickle the function synchronously.
 
-        Arg(s)
-            function: A Python picklable callable
+        Args:
+            function: A Python pickleable callable
             args: List of function's positional arguments
             kwargs: List of function's keyword arguments
 
-        Return(s)
+        Returns:
             Path to pickled object file
+
         """
         dispatch_id = task_metadata["dispatch_id"]
         node_id = task_metadata["node_id"]
@@ -151,15 +183,16 @@ class GCPBatchExecutor(RemoteExecutor):
         self, function: Callable, args: List, kwargs: Dict, task_metadata: Dict
     ) -> str:
         """
-        Pickle the function asynchronously
+        Pickle the function asynchronously.
 
-        Arg(s)
-            function: A Python picklable callable
+        Args:
+            function: A Python pickle-able callable
             args: List of function's positional arguments
             kwargs: List of function's keyword arguments
 
-        Return(s)
+        Returns:
             Path to pickled object file
+
         """
         self._debug_log("Pickling function, args and kwargs ...")
         loop = asyncio.get_running_loop()
@@ -172,15 +205,24 @@ class GCPBatchExecutor(RemoteExecutor):
         """Method to validate credentials.
 
         TODO - Add full implementation in future phase.
+
         """
         return True
 
     def _upload_task_sync(self, func_filename: str) -> None:
-        """Upload task to the google storage bucket"""
+        """Upload task to the google storage bucket.
+
+        Args:
+            func_filename: Path to the pickled function file.
+
+        Returns:
+            None
+
+        """
         self._debug_log(f"Uploading {func_filename} to bucket {self.bucket_name}")
         storage_client = storage.Client()
         bucket = storage_client.bucket(self.bucket_name)
-        blob = bucket.blob(func_filename)
+        blob = bucket.blob(Path(func_filename).name)
         try:
             blob.upload_from_filename(func_filename, if_generation_match=0)
         except Exception:
@@ -188,19 +230,32 @@ class GCPBatchExecutor(RemoteExecutor):
             raise
 
     async def _upload_task(self, func_filename: str) -> None:
-        """Upload task to the google storage bucket"""
+        """Upload task to the google storage bucket.add()
+
+        Args:
+            func_filename: Path to the pickled function file.
+
+        Returns:
+            None
+
+        """
         loop = asyncio.get_running_loop()
         fut = loop.run_in_executor(None, self._upload_task_sync, func_filename)
-        return await fut
+        await fut
 
     def _create_batch_job_sync(
         self, image_uri: str, task_metadata: Dict[str, str]
     ) -> batch_v1.Job:
         """
-        Create a Batch job object
+        Create a Batch job object.
 
         Args:
-            task_metadata: Dictionary containing the dispatch_id and task node_id
+            image_uri: URI of the container image.
+            task_metadata: Dictionary containing the dispatch_id and task node_id.
+
+        Returns:
+            Batch job object.
+
         """
         dispatch_id = task_metadata["dispatch_id"]
         node_id = task_metadata["node_id"]
@@ -216,33 +271,22 @@ class GCPBatchExecutor(RemoteExecutor):
         task_spec.runnables.append(runnable)
 
         # Setup task's environment variables
-        function_filename = os.path.join(
-            MOUNT_PATH,
-            COVALENT_TASK_FUNC_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id),
+        function_filename = COVALENT_TASK_FUNC_FILENAME.format(
+            dispatch_id=dispatch_id, node_id=node_id
         )
-        result_filename = os.path.join(
-            MOUNT_PATH, RESULT_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
-        )
-        exception_filename = os.path.join(
-            MOUNT_PATH,
-            EXCEPTION_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id),
-        )
+        result_filename = RESULT_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
+        exception_filename = EXCEPTION_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
 
-        task_spec.environment = batch_v1.Environment(
-            variables={
-                "COVALENT_TASK_FUNC_FILENAME": function_filename,
-                "RESULT_FILENAME": result_filename,
-                "EXCEPTION_FILENAME": exception_filename,
-            }
-        )
+        job_env_vars = {
+            "COVALENT_TASK_FUNC_FILENAME": function_filename,
+            "RESULT_FILENAME": result_filename,
+            "EXCEPTION_FILENAME": exception_filename,
+            "COVALENT_BUCKET_NAME": self.bucket_name,
+        }
 
-        # Mount bucket
-        gcs_bucket = batch_v1.GCS()
-        gcs_bucket.remote_path = self.bucket_name
-        gcs_volume = batch_v1.Volume()
-        gcs_volume.gcs = gcs_bucket
-        gcs_volume.mount_path = MOUNT_PATH
-        task_spec.volumes = [gcs_volume]
+        self._debug_log(f"Environment variables for new batch job {job_env_vars}")
+
+        task_spec.environment = batch_v1.Environment(variables=job_env_vars)
 
         # Specify task's compute resources
         task_spec.compute_resource = batch_v1.ComputeResource(
@@ -271,22 +315,32 @@ class GCPBatchExecutor(RemoteExecutor):
     async def _create_batch_job(
         self, image_uri: str, task_metadata: Dict[str, str]
     ) -> batch_v1.Job:
-        """Create a batch job asynchronously"""
+        """Create a batch job asynchronously.
+
+        Args:
+            image_uri: URI of the container image.
+            task_metadata: Dictionary containing the dispatch_id and task node_id.
+
+        Returns:
+            Batch job object.
+
+        """
         loop = asyncio.get_running_loop()
         fut = loop.run_in_executor(None, self._create_batch_job_sync, image_uri, task_metadata)
         return await fut
 
     async def submit_task(self, dispatch_id: str, node_id: int, batch_job: batch_v1.Job) -> Any:
         """
-        Submit a batch job to Google for execution
+        Submit a batch job to Google for execution.
 
-        Arg(s)
+        Args:
             dispatch_id: Dispatch ID of the workflow
             node_id: ID of the node in the lattice
             batch_job: A Google batch Job object
 
-        Return(s)
-            Google Batch job create response
+        Returns:
+            Google Batch create job response.
+
         """
         batch_client = self._get_batch_client()
 
@@ -299,13 +353,14 @@ class GCPBatchExecutor(RemoteExecutor):
 
     async def get_job_state(self, job_name: str) -> str:
         """
-        Get the job's state
+        Get batch job state.
 
-        Arg(s)
-            job_name: Name of the batch job
+        Args:
+            job_name: Name of the batch job.
 
-        Return(s):
-           job_state_name: String representing the state of the batch job
+        Returns:
+           job_state_name: String representing the state of the batch job.
+
         """
         batch_client = self._get_batch_client()
         job_description = await batch_client.get_job(
@@ -317,14 +372,15 @@ class GCPBatchExecutor(RemoteExecutor):
         """
         Run the task by the executor
 
-        Arg(s)
+        Args:
             function: Callable that represents the electron's computation
             args: Positional arguments for the function
             kwargs: Keyword arguments for the function
             task_metadata: Dictionary containing the dispatch and node id for the task
 
-        Return(s)
+        Returns:
             Result object
+
         """
         dispatch_id = task_metadata["dispatch_id"]
         node_id = task_metadata["node_id"]
@@ -336,32 +392,28 @@ class GCPBatchExecutor(RemoteExecutor):
         if not await self.get_cancel_requested():
             local_func_filename = await self._pickle_func(function, args, kwargs, task_metadata)
         else:
-            self._debug_log(f"TASK CANCELLED")
+            self._debug_log("TASK CANCELLED")
             raise TaskCancelledError(f"Batch job {batch_job_name} requested to be cancelled")
 
-        # Upload the pickled function, args & kwargs to storage bucket
-        if not await self.get_cancel_requested():
-            self._debug_log(f"Uploading {local_func_filename} to {self.bucket_name}")
-            await self._upload_task(local_func_filename)
-        else:
+        if await self.get_cancel_requested():
             raise TaskCancelledError(f"Batch job {batch_job_name} requested to be cancelled")
 
-        # Create Batch job
-        if not await self.get_cancel_requested():
-            self._debug_log(f"Creating batch job")
-            batch_job = await self._create_batch_job(
-                image_uri=self.container_image_uri, task_metadata=task_metadata
-            )
-        else:
+        self._debug_log(f"Uploading {local_func_filename} to {self.bucket_name}")
+        await self._upload_task(local_func_filename)
+
+        if await self.get_cancel_requested():
             raise TaskCancelledError(f"Batch job {batch_job_name} requested to be cancelled")
 
-        # Submit Batch job
-        if not await self.get_cancel_requested():
-            batch_job = await self.submit_task(dispatch_id, node_id, batch_job)
-            self._debug_log(f"Submitted batch job {batch_job.uid}")
-        else:
+        self._debug_log("Creating batch job")
+        batch_job = await self._create_batch_job(
+            image_uri=self.container_image_uri, task_metadata=task_metadata
+        )
+
+        if await self.get_cancel_requested():
             raise TaskCancelledError(f"Batch job {batch_job_name} requested to be cancelled")
 
+        batch_job = await self.submit_task(dispatch_id, node_id, batch_job)
+        self._debug_log(f"Submitted batch job {batch_job.uid}")
         self._debug_log(f"Saving job handle {batch_job_name} to the database")
         await self.set_job_handle(handle=batch_job_name)
 
@@ -372,7 +424,7 @@ class GCPBatchExecutor(RemoteExecutor):
         if object_key == exception_filename:
             # Download the raised exception
             self._debug_log(
-                f"Retrieving exception raised during task exceution - {dispatch_id}:{node_id}"
+                f"Retrieving exception raised during task execution - {dispatch_id}:{node_id}"
             )
             exception = await self.query_task_exception(exception_filename)
             raise RuntimeError(exception)
@@ -380,33 +432,34 @@ class GCPBatchExecutor(RemoteExecutor):
         if object_key == result_filename:
             # Download the result object
             self._debug_log(f"Retrieving result for task - {dispatch_id}:{node_id}")
-            result_object = await self.query_result(result_filename)
-            return result_object
+            return await self.query_result(result_filename)
 
     def _get_status_sync(self, object_key: str) -> bool:
         """
-        Check the status of the objects in the bucket
+        Check the status of the object in the bucket.
 
-        Arg(s)
-            object_keys: Name of the objects to check for in the bucket
+        Args:
+            object_key: Name of the object to check for in the bucket.
 
-        Return(s)
-            List of bools indicating if the exists or not
+        Returns:
+            Status whether object exists in bucket or not.
+
         """
         storage_client = storage.Client()
         blobs = storage_client.list_blobs(self.bucket_name)
         blob_names = [blob.name for blob in blobs]
-        return True if object_key in blob_names else False
+        return object_key in blob_names
 
     async def get_status(self, object_key: str) -> bool:
         """
-        Run get status sync asynchronously
+        Run get status sync asynchronously.
 
-        Arg(s)
-            object_keys: Name of the objects to check for in the bucket
+        Args:
+            object_key: Name of the object to check for in the bucket.
 
-        Return(s)
-            List of bools indicating if the exists or not
+        Returns:
+            Boolean status of the existence of the object in the bucket.
+
         """
         loop = asyncio.get_running_loop()
         fut = loop.run_in_executor(None, self._get_status_sync, object_key)
@@ -416,13 +469,16 @@ class GCPBatchExecutor(RemoteExecutor):
         self, task_metadata: Dict, result_filename: str, exception_filename: str
     ) -> Optional[str]:
         """
-        Poll task until its result is ready
+        Poll task until its result is ready.
 
-        Arg(s):
-            object_key: Name of the object to check if its present in the bucket
+        Args:
+            task_metadata: Dictionary containing the dispatch and node id for the task.
+            result_filename: Name of the result object.
+            exception_filename: Name of the exception object.
 
-        Return(s):
-            object_key
+        Returns:
+            Exception or result filename.
+
         """
         dispatch_id = task_metadata["dispatch_id"]
         node_id = task_metadata["node_id"]
@@ -458,15 +514,15 @@ class GCPBatchExecutor(RemoteExecutor):
 
     def _download_blob_to_file_sync(self, bucket_name: str, blob_name: str) -> Optional[str]:
         """
-        Download a blob from the storage bucket to local filesystem in the cache directory
+        Download a blob from the storage bucket to local filesystem in the cache directory.
 
-        Arg(s)
+        Args:
             bucket_name: Name of the storage bucket to download the blob from
             blob_name: Name of the blob object to download
-            download_dir: Directory to download the blob to locally
 
-        Return(s)
-            None
+        Returns:
+            Local blob filename.
+
         """
         local_blob_filename = os.path.join(self.cache_dir, blob_name)
         try:
@@ -481,15 +537,15 @@ class GCPBatchExecutor(RemoteExecutor):
 
     async def _download_blob_to_file(self, bucket_name: str, blob_name: str) -> Optional[str]:
         """
-        Download a blob from the storage bucket to local filesystem in the cache directory asynchronously
+        Download a blob from the storage bucket to local filesystem in the cache directory asynchronously.
 
-        Arg(s)
-            bucket_name: Name of the storage bucket to download the blob from
-            blob_name: Name of the blob object to download
-            download_dir: Directory to download the blob to locally
+        Args:
+            bucket_name: Name of the storage bucket to download the blob from.
+            blob_name: Name of the blob object to download.
 
-        Return(s)
-            None
+        Returns:
+            Local blob filename.
+
         """
         loop = asyncio.get_running_loop()
         fut = loop.run_in_executor(None, self._download_blob_to_file_sync, bucket_name, blob_name)
@@ -497,15 +553,15 @@ class GCPBatchExecutor(RemoteExecutor):
 
     async def query_task_exception(self, exception_filename: str) -> Optional[str]:
         """
-        Fetch the exception raised by the task from the storage bucket
+        Fetch the exception raised by the task from the storage bucket.
 
-        Arg(s)
-            exception_filename: Name of the exception file to be downloaded from the storage bucket into the cache_dir
+        Args:
+            exception_filename: Name of the exception file to be downloaded from the storage bucket into the cache_dir.
 
-        Return(s)
-            json string of the exception raised by the task
+        Returns:
+            JSON string of the exception raised by the task.
+
         """
-
         try:
             local_exception_filename = await self._download_blob_to_file(
                 self.bucket_name, exception_filename
@@ -520,13 +576,14 @@ class GCPBatchExecutor(RemoteExecutor):
 
     async def query_result(self, result_filename: str) -> Any:
         """
-        Fetch the result object from the storage bucket asynchronously
+        Fetch the result object from the storage bucket asynchronously.
 
-        Arg(s)
-           result_filename: Name of the result filename stored in the storage bucket
+        Args:
+           result_filename: Name of the result filename stored in the storage bucket.
 
-        Return(s)
-            Result object from the task
+        Returns:
+            Result object from the task.
+
         """
         try:
             local_result_filename = await self._download_blob_to_file(
@@ -541,14 +598,15 @@ class GCPBatchExecutor(RemoteExecutor):
 
     async def cancel(self, task_metadata: Dict, job_handle: str) -> None:
         """
-        Cancel the batch job
+        Cancel the batch job.
 
-        Arg(s)
-            task_metadata: Dictionary with the task's dispatch_id and node id
-            job_handle: Unique job handle assigned to the task by Batch
+        Args:
+            task_metadata: Dictionary with the task's dispatch_id and node id.
+            job_handle: Unique job handle assigned to the task by Batch.
 
-        Return(s)
+        Returns:
             None
+
         """
         batch_client = self._get_batch_client()
         await batch_client.delete_job(
