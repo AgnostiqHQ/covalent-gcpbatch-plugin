@@ -36,20 +36,6 @@ from pydantic import BaseModel
 EXECUTOR_PLUGIN_NAME = "GCPBatchExecutor"
 
 
-_EXECUTOR_PLUGIN_DEFAULTS = {
-    "bucket_name": "",
-    "container_image_uri": "",
-    "service_account_email": "",
-    "project_id": "",
-    "region": "",
-    "vcpus": 2,
-    "memory": 512,
-    "time_limit": 300,
-    "poll_freq": 5,
-    "retries": 3,
-}
-
-
 class ExecutorPluginDefaults(BaseModel):
     """
     Default configuration values for the executor
