@@ -9,8 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Removed mounting storage bucket into the container
-- Revert to downloading the objects using google cloud sdk
+- Removed mounting storage bucket into the container.
+- Revert to downloading the objects using google cloud sdk.
+- Fixes to Terraform script and outputs.
+- Fixed bugs in exec script.
+- Updated cache_dir to have a default value.
 
 ## [0.7.1] - 2023-03-10
 

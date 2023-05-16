@@ -18,11 +18,13 @@
 #
 # Relief from the License may be granted by purchasing a commercial license.
 
+import os
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from covalent._shared_files.exceptions import TaskCancelledError
 from google.cloud.batch_v1.services.batch_service.async_client import service_account
-import pytest
-import os
-from unittest.mock import MagicMock, AsyncMock
+
 from covalent_gcpbatch_plugin import GCPBatchExecutor, gcpbatch
 
 
@@ -82,7 +84,7 @@ def test_executor_default_constructor(mocker):
     """
     mock_get_config = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.get_config")
     GCPBatchExecutor()
-    assert mock_get_config.call_count == 10
+    assert mock_get_config.call_count == 11
 
 
 def test_get_batch_service_client(gcpbatch_executor, mocker):
@@ -157,7 +159,7 @@ async def test_executor_run_task_cancelled_when_pickling_func(gcpbatch_executor,
     with pytest.raises(TaskCancelledError):
         await gcpbatch_executor.run(mock_function, mock_args, mock_kwargs, mock_task_metadata)
 
-    gcpbatch_executor._debug_log.assert_called_once_with(f"TASK CANCELLED")
+    gcpbatch_executor._debug_log.assert_called_once_with("TASK CANCELLED")
 
 
 @pytest.mark.asyncio
@@ -259,15 +261,9 @@ async def test_create_batch_job(gcpbatch_executor, mocker):
             "COVALENT_TASK_FUNC_FILENAME": func_filename,
             "RESULT_FILENAME": result_filename,
             "EXCEPTION_FILENAME": exception_filename,
-            "BUCKET_NAME": gcpbatch_executor.bucket_name,
+            "COVALENT_BUCKET_NAME": gcpbatch_executor.bucket_name,
         }
     )
-    #    mock_batch_v1.GCS.assert_called_once()
-    #    assert mock_batch_v1.GCS.return_value.remote_path == gcpbatch_executor.bucket_name
-    #    mock_batch_v1.Volume.assert_called_once()
-    #    assert mock_batch_v1.Volume.return_value.gcs == mock_batch_v1.GCS.return_value
-    #    assert mock_batch_v1.Volume.return_value.mount_path == "/mnt/disks/covalent"
-    #    assert mock_batch_v1.TaskSpec.return_value.volumes == [mock_batch_v1.Volume.return_value]
 
     mock_batch_v1.ComputeResource.assert_called_once_with(
         cpu_milli=gcpbatch_executor.vcpus * 1000, memory_mib=gcpbatch_executor.memory
@@ -377,7 +373,7 @@ async def test_get_status_false(gcpbatch_executor, mocker):
     mock_storage_client.return_value.list_blobs.assert_called_once_with(
         gcpbatch_executor.bucket_name
     )
-    assert res == False
+    assert not res
 
 
 @pytest.mark.asyncio

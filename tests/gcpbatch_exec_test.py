@@ -18,8 +18,10 @@
 #
 # Relief from the License may be granted by purchasing a commercial license.
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
 from covalent_gcpbatch_plugin.exec import main
 
 
@@ -78,5 +80,5 @@ def test_exec_main_raises_exception(mocker):
         main()
 
     mock_os_path_join.assert_called()
-    mock_file_open.assert_called_once()
+    assert len(mock_file_open.mock_calls) == 6
     mock_json_dump.assert_called_once()
