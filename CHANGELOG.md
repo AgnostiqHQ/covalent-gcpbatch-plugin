@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+## [0.8.0] - 2023-05-16
+
+### Authors
+
+- Venkat Bala <venkat@agnostiq.ai>
+- Faiyaz Hasan <faiyaz@agnostiq.ai>
+- Venkat Bala <15014089+venkatBala@users.noreply.github.com>
+- Alejandro Esquivel <ae@alejandro.ltd>
+- Venkat Bala <balavk89@gmail.com>
+
+
 ### Changed
 
 - Removed mounting storage bucket into the container.
