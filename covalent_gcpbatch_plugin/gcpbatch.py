@@ -168,7 +168,7 @@ class GCPBatchExecutor(RemoteExecutor):
 
     def _pickle_func_sync(
         self, function: Callable, args: List, kwargs: List, task_metadata: Dict
-    ) -> None:
+    ) -> str:
         """
         Pickle the function synchronously.
 
@@ -178,7 +178,7 @@ class GCPBatchExecutor(RemoteExecutor):
             kwargs: List of function's keyword arguments
 
         Returns:
-            None
+            Path to pickled object file
 
         """
         dispatch_id = task_metadata["dispatch_id"]
@@ -192,19 +192,21 @@ class GCPBatchExecutor(RemoteExecutor):
         with open(local_func_filename, "wb") as f:
             pickle.dump((function, args, kwargs), f)
 
+        return local_func_filename
+
     async def _pickle_func(
         self, function: Callable, args: List, kwargs: Dict, task_metadata: Dict
-    ) -> None:
+    ) -> str:
         """
         Pickle the function asynchronously.
 
         Args:
-            function: A Python pickleable callable.
-            args: List of function's positional arguments.
-            kwargs: List of function's keyword arguments.
+            function: A Python pickle-able callable
+            args: List of function's positional arguments
+            kwargs: List of function's keyword arguments
 
         Returns:
-            None
+            Path to pickled object file
 
         """
         self._debug_log("Pickling function, args and kwargs ...")
@@ -212,7 +214,7 @@ class GCPBatchExecutor(RemoteExecutor):
         fut = loop.run_in_executor(
             None, self._pickle_func_sync, function, args, kwargs, task_metadata
         )
-        await fut
+        return await fut
 
     def _validate_credentials(self) -> bool:
         """Method to validate credentials.
@@ -235,7 +237,7 @@ class GCPBatchExecutor(RemoteExecutor):
         self._debug_log(f"Uploading {func_filename} to bucket {self.bucket_name}")
         storage_client = storage.Client()
         bucket = storage_client.bucket(self.bucket_name)
-        blob = bucket.blob(func_filename)
+        blob = bucket.blob(Path(func_filename).name)
         try:
             blob.upload_from_filename(func_filename, if_generation_match=0)
         except Exception:
@@ -254,7 +256,7 @@ class GCPBatchExecutor(RemoteExecutor):
         """
         loop = asyncio.get_running_loop()
         fut = loop.run_in_executor(None, self._upload_task_sync, func_filename)
-        return await fut
+        await fut
 
     def _create_batch_job_sync(
         self, image_uri: str, task_metadata: Dict[str, str]
@@ -400,13 +402,10 @@ class GCPBatchExecutor(RemoteExecutor):
         batch_job_name = BATCH_JOB_NAME.format(dispatch_id=dispatch_id, node_id=node_id)
         result_filename = RESULT_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
         exception_filename = EXCEPTION_FILENAME.format(dispatch_id=dispatch_id, node_id=node_id)
-        task_func_filename = COVALENT_TASK_FUNC_FILENAME.format(
-            dispatch_id=dispatch_id, node_id=node_id
-        )
 
         # Pickle the function, args and kwargs
         if not await self.get_cancel_requested():
-            await self._pickle_func(function, args, kwargs, task_metadata)
+            local_func_filename = await self._pickle_func(function, args, kwargs, task_metadata)
         else:
             self._debug_log("TASK CANCELLED")
             raise TaskCancelledError(f"Batch job {batch_job_name} requested to be cancelled")
@@ -414,8 +413,8 @@ class GCPBatchExecutor(RemoteExecutor):
         if await self.get_cancel_requested():
             raise TaskCancelledError(f"Batch job {batch_job_name} requested to be cancelled")
 
-        self._debug_log(f"Uploading {task_func_filename} to {self.bucket_name}")
-        await self._upload_task(task_func_filename)
+        self._debug_log(f"Uploading {local_func_filename} to {self.bucket_name}")
+        await self._upload_task(local_func_filename)
 
         if await self.get_cancel_requested():
             raise TaskCancelledError(f"Batch job {batch_job_name} requested to be cancelled")
