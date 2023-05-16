@@ -384,7 +384,7 @@ class GCPBatchExecutor(RemoteExecutor):
         if object_key == exception_filename:
             # Download the raised exception
             self._debug_log(
-                f"Retrieving exception raised during task exceution - {dispatch_id}:{node_id}"
+                f"Retrieving exception raised during task execution - {dispatch_id}:{node_id}"
             )
             exception = await self.query_task_exception(exception_filename)
             raise RuntimeError(exception)
@@ -392,8 +392,7 @@ class GCPBatchExecutor(RemoteExecutor):
         if object_key == result_filename:
             # Download the result object
             self._debug_log(f"Retrieving result for task - {dispatch_id}:{node_id}")
-            result_object = await self.query_result(result_filename)
-            return result_object
+            return await self.query_result(result_filename)
 
     def _get_status_sync(self, object_key: str) -> bool:
         """

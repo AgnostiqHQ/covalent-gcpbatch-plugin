@@ -36,16 +36,13 @@ def main() -> None:
 
     Return(s)
         None
+        
     """
     try:
         
         func_filename = os.getenv("COVALENT_TASK_FUNC_FILENAME")
         result_filename = os.getenv("RESULT_FILENAME")
         bucket_name = os.getenv("COVALENT_BUCKET_NAME")
-
-        print(f"Function filename: {func_filename}")
-        print(f"Result filename: {result_filename}")
-        print(f"Bucket Name: {bucket_name}")
 
         local_func_filename = os.path.join(CACHE_DIR, func_filename)
         local_result_filename = os.path.join(CACHE_DIR, result_filename)
@@ -65,7 +62,7 @@ def main() -> None:
         with open(local_func_filename, "rb") as f:
             function, args, kwargs = pickle.load(f)
 
-        result = function(*args, *kwargs)
+        result = function(*args, **kwargs)
 
         # Write the result to the mount path
         with open(local_result_filename, "wb") as f:
@@ -79,15 +76,13 @@ def main() -> None:
         exception_filename = os.getenv("EXCEPTION_FILENAME")
         bucket_name = os.getenv("COVALENT_BUCKET_NAME")
 
-        print(f"Exception file name: {exception_filename}")
-        print(f"Bucket Name: {bucket_name}")
-
         # upload exception
         storage_client = storage.Client()
         bucket = storage_client.bucket(bucket_name)
 
         exception_blob = bucket.blob(exception_filename)
         local_exception_filename = os.path.join(CACHE_DIR, exception_filename)
+
         # Write the exception to the mount path
         with open(local_exception_filename, "w") as f:
             json.dump(str(ex), f)
