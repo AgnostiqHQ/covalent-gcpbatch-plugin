@@ -113,11 +113,7 @@ For more information about all of the possible configuration values visit our [r
 
 ## 4. Required GCP Resources
 
-In order to run your workflows with covalent there are a few notable GCP resources that need to be provisioned first.
-
-The required GCP resources are:
-
-    ... # Fill in info
+In order to run your workflows with covalent there are a few notable GCP resources that need to be provisioned first. The required resources are Google storage bucket, docker artifact registry and service account.
 
 For more information regarding which cloud resources need to be provisioned visit our [read the docs (RTD) guide](https://covalent.readthedocs.io/en/latest/api/executors/gcpbatch.html#required-cloud-resources) for this plugin.
 
