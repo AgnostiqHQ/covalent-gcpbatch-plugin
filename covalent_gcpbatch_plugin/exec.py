@@ -36,10 +36,10 @@ def main() -> None:
 
     Return(s)
         None
-        
+
     """
     try:
-        
+
         func_filename = os.getenv("COVALENT_TASK_FUNC_FILENAME")
         result_filename = os.getenv("RESULT_FILENAME")
         bucket_name = os.getenv("COVALENT_BUCKET_NAME")
