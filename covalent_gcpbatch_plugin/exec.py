@@ -19,8 +19,9 @@
 # Relief from the License may be granted by purchasing a commercial license.
 
 
-import os
 import json
+import os
+
 import cloudpickle as pickle
 from google.cloud import storage
 
@@ -36,10 +37,10 @@ def main() -> None:
 
     Return(s)
         None
-        
+
     """
     try:
-        
+
         func_filename = os.getenv("COVALENT_TASK_FUNC_FILENAME")
         result_filename = os.getenv("RESULT_FILENAME")
         bucket_name = os.getenv("COVALENT_BUCKET_NAME")
