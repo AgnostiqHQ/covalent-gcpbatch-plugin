@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/AgnostiqHQ/covalent/master/doc/source/_static/covalent_readme_banner.svg" width=150%>
+<img src="https://raw.githubusercontent.com/AgnostiqHQ/covalent-gcpbatch-plugin/i-update-readme-image/assets/gcp_batch_readme_banner.png" width=150%>
 
 </div>
 
