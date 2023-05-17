@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - GCP Batch Readme banner.
 
+### Changed
+
+- precommit yml version updates.
+
 ## [0.9.0] - 2023-05-16
 
 ### Authors
