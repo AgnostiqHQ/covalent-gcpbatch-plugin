@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+## [0.11.0] - 2023-09-21
+
+### Authors
+
+- Will Cunningham <wjcunningham7@users.noreply.github.com>
+
+
 ### Changed
 
 - Updated license to Apache
