@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Changed
+
+- Adding prefix to artifact registry
+
 ## [0.11.0] - 2023-09-21
 
 ### Authors

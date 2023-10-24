@@ -40,7 +40,7 @@ provider docker {
 data google_client_config current {}
 
 locals {
-  executor_image_tag = join("/", [join("-", [data.google_client_config.current.region, "docker.pkg.dev"]), var.project_id, "covalent", "covalent-gcpbatch-executor"])
+  executor_image_tag = join("/", [join("-", [data.google_client_config.current.region, "docker.pkg.dev"]), var.project_id, google_artifact_registry_repository.covalent.name, "covalent-gcpbatch-executor"])
 }
 
 resource random_string sasuffix {
@@ -52,7 +52,7 @@ resource random_string sasuffix {
 # Create the docker artifact registry
 resource google_artifact_registry_repository covalent {
   location      = data.google_client_config.current.region
-  repository_id = "covalent"
+  repository_id = join("", [var.prefix, "covalent", "registry"])
   description   = "Covalent Batch executor base images"
   format        = "DOCKER"
 }
