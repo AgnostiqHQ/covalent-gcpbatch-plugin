@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Changed
+
+- Changed the default value for `project_id` & `prefix`
+
+### Added
+
+- Added a variable to fetch the Json key path to connect to google provider
+- Added credentials attribute to google provider section via JSON key path
+
 ## [0.11.0] - 2023-09-21
 
 ### Authors

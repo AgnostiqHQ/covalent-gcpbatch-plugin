@@ -26,6 +26,7 @@ terraform {
 provider google {
   project = var.project_id
   region  = "us-east1"
+  credentials = file(var.key_path)
 }
 
 provider docker {
