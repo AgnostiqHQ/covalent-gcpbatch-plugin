@@ -282,7 +282,7 @@ async def test_create_batch_job(gcpbatch_executor, mocker):
     )
     mock_batch_v1.AllocationPolicy.assert_called_once_with(
         instances=[mock_batch_v1.AllocationPolicy.InstancePolicyOrTemplate.return_value],
-        service_account={"email": gcpbatch_executor.service_account_email}
+        service_account={"email": gcpbatch_executor.service_account_email},
     )
     mock_batch_v1.LogsPolicy.assert_called_once_with(destination="CLOUD_LOGGING")
     mock_batch_v1.Job.assert_called_once_with(

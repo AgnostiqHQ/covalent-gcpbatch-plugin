@@ -307,26 +307,21 @@ class GCPBatchExecutor(RemoteExecutor):
         # Create an InstancePolicyOrTemplate
         if self.num_gpus > 0:
             accelerators = [
-                    batch_v1.AllocationPolicy.Accelerator(
-                        type_=self.gpu_type,
-                        count=self.num_gpus
-                    )
+                batch_v1.AllocationPolicy.Accelerator(type_=self.gpu_type, count=self.num_gpus)
             ]
         else:
             accelerators = []
 
         instance = batch_v1.AllocationPolicy.InstancePolicyOrTemplate(
-            install_gpu_drivers=self.num_gpus>0,
+            install_gpu_drivers=self.num_gpus > 0,
             policy=batch_v1.AllocationPolicy.InstancePolicy(
-                machine_type="c3-standard-22",
-                accelerators=accelerators
-            )
+                machine_type="c3-standard-22", accelerators=accelerators
+            ),
         )
 
         # Set job's allocation policies
         alloc_policy = batch_v1.AllocationPolicy(
-            instances=[instance],
-            service_account={"email": self.service_account_email}
+            instances=[instance], service_account={"email": self.service_account_email}
         )
 
         # Set the cloud logging policy on the job
