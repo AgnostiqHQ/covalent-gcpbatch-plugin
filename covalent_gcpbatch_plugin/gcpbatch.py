@@ -314,9 +314,7 @@ class GCPBatchExecutor(RemoteExecutor):
 
         instance = batch_v1.AllocationPolicy.InstancePolicyOrTemplate(
             install_gpu_drivers=self.num_gpus > 0,
-            policy=batch_v1.AllocationPolicy.InstancePolicy(
-                accelerators=accelerators
-            ),
+            policy=batch_v1.AllocationPolicy.InstancePolicy(accelerators=accelerators),
         )
 
         # Set job's allocation policies
