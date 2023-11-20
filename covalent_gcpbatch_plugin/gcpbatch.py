@@ -42,6 +42,8 @@ class ExecutorPluginDefaults(BaseModel):
     project_id: str = ""
     region: str = ""
     vcpus: int = 2
+    num_gpus: int = 0
+    gpu_type: str = "nvidia-tesla-t4"
     memory: int = 512
     time_limit: float = 300
     poll_freq: int = 5
@@ -57,6 +59,8 @@ class ExecutorInfraDefaults(BaseModel):
     prefix: str
     project_id: str
     vcpus: Optional[int] = 2
+    num_gpus: Optional[int] = 0
+    gpu_type: Optional[str] = ""
     memory: Optional[float] = 512
     time_limit: Optional[int] = 300
     poll_freq: Optional[int] = 5
@@ -85,6 +89,8 @@ class GCPBatchExecutor(RemoteExecutor):
         project_id: Google project ID
         region: Google region
         vcpus: Number of virtual CPU cores needed by the job
+        num_gpus: Number of GPUs available to a task
+        gpu_type: Type of GPU to allocate (see `gcloud compute accelerator-types list`)
         memory: Memory requirement for the job in (MB)a
         time_limit: Number of seconds to wait before the job is considered to have failed
         poll_freq: Frequency with which the poll the bucket and job for results
@@ -104,6 +110,8 @@ class GCPBatchExecutor(RemoteExecutor):
         project_id: Optional[str] = None,
         region: Optional[str] = None,
         vcpus: Optional[int] = None,
+        num_gpus: Optional[int] = None,
+        gpu_type: Optional[str] = None,
         memory: Optional[int] = None,
         time_limit: Optional[int] = None,
         poll_freq: Optional[int] = None,
@@ -120,6 +128,8 @@ class GCPBatchExecutor(RemoteExecutor):
             "executors.gcpbatch.service_account_email"
         )
         self.vcpus = vcpus or int(get_config("executors.gcpbatch.vcpus"))
+        self.num_gpus = num_gpus or int(get_config("executors.gcpbatch.num_gpus"))
+        self.gpu_type = gpu_type or get_config("executors.gcpbatch.gpu_type")
         self.memory = memory or int(get_config("executors.gcpbatch.memory"))
         self.time_limit = time_limit or int(get_config("executors.gcpbatch.time_limit"))
         self.poll_freq = poll_freq or int(get_config("executors.gcpbatch.poll_freq"))
@@ -294,8 +304,28 @@ class GCPBatchExecutor(RemoteExecutor):
         # Create task group
         task_group = batch_v1.TaskGroup(task_count=1, task_spec=task_spec)
 
+        # Create an InstancePolicyOrTemplate
+        if self.num_gpus > 0:
+            accelerators = [
+                    batch_v1.AllocationPolicy.Accelerator(
+                        type_=self.gpu_type,
+                        count=self.num_gpus
+                    )
+            ]
+        else:
+            accelerators = []
+
+        instance = batch_v1.AllocationPolicy.InstancePolicyOrTemplate(
+            install_gpu_drivers=self.num_gpus>0,
+            policy=batch_v1.AllocationPolicy.InstancePolicy(
+                machine_type="c3-standard-22",
+                accelerators=accelerators
+            )
+        )
+
         # Set job's allocation policies
         alloc_policy = batch_v1.AllocationPolicy(
+            instances=[instance],
             service_account={"email": self.service_account_email}
         )
 
