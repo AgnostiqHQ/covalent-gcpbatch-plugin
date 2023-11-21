@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+## [0.12.0] - 2023-11-21
+
+### Authors
+
+- mpvgithub <107603631+mpvgithub@users.noreply.github.com>
+
+
 ### Changed
 
 - Changed the default value for `project_id` & `prefix`
