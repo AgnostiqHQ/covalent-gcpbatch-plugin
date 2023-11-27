@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Fix
+
+- Added `key_path` & `access_token` to ExecutorInfraDefaults to accept arguments from **deploy** command
+
+### Added
+
+- Added tftpl file to main.tf to generate conf for GCP batch plugin
+
+### Changed
+
+- Modified the `key_path` variable to have a default value
+
 ## [0.12.0] - 2023-11-21
 
 ### Authors
