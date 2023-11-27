@@ -47,8 +47,9 @@ variable "covalent_package_version" {
 
 variable "prefix" {
   type    = string
-  default = "covalent"
+  default = ""
 }
+
 
 variable "key_path" {
   type        = string

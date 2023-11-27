@@ -23,10 +23,31 @@ terraform {
   }
 }
 
+resource "random_string" "default_prefix" {
+  length  = 9
+  upper   = false
+  special = false
+}
+
+data "google_client_config" "current" {}
+
+locals {
+  prefix   = var.prefix != "" ? var.prefix : random_string.default_prefix.result
+  key_path = var.key_path != "" ? var.key_path : "${pathexpand("~")}/.config/gcloud/application_default_credentials.json"
+
+  executor_image_tag = join("/", [join("-", [coalesce(data.google_client_config.current.region, var.region), "docker.pkg.dev"]), var.project_id, "covalent", "covalent-gcpbatch-executor"])
+
+  executor_config_content = templatefile("${path.module}/gcpbatch.conf.tftpl", {
+    project_id               = var.project_id
+    covalent_package_version = var.covalent_package_version
+    key_path                 = var.key_path
+  })
+}
+
 provider "google" {
   project     = var.project_id
   region      = "us-east1"
-  credentials = file(var.key_path)
+  credentials = local.key_path
 }
 
 provider "docker" {
@@ -36,18 +57,6 @@ provider "docker" {
     username = "oauth2accesstoken"
     password = var.access_token
   }
-}
-
-data "google_client_config" "current" {}
-
-locals {
-  executor_image_tag = join("/", [join("-", [coalesce(data.google_client_config.current.region, var.region), "docker.pkg.dev"]), var.project_id, "covalent", "covalent-gcpbatch-executor"])
-}
-
-resource "random_string" "sasuffix" {
-  length  = 16
-  lower   = false
-  special = false
 }
 
 # Create the docker artifact registry
@@ -81,14 +90,14 @@ resource "docker_registry_image" "base_executor" {
 
 # Create a storage bucket
 resource "google_storage_bucket" "covalent" {
-  name          = join("-", [var.prefix, "covalent", "storage", "bucket"])
+  name          = join("-", ["covalent", local.prefix, "storage", "bucket"])
   location      = coalesce(data.google_client_config.current.region, var.region)
   force_destroy = true
 }
 
 # Create custom service account for running the batch job
 resource "google_service_account" "covalent" {
-  account_id   = join("", [var.prefix, "covalent", "saaccount"])
+  account_id   = join("", ["covalent", local.prefix, "saaccount"])
   display_name = "CovalentBatchExecutorServiceAccount"
 }
 
@@ -126,14 +135,6 @@ resource "google_project_iam_member" "storage_object_reader" {
   project = var.project_id
   role    = "roles/storage.objectViewer"
   member  = google_service_account.covalent.member
-}
-
-locals {
-  executor_config_content = templatefile("${path.module}/gcpbatch.conf.tftpl", {
-    project_id               = var.project_id
-    covalent_package_version = var.covalent_package_version
-    key_path                 = var.key_path
-  })
 }
 
 resource "local_file" "executor_config" {
