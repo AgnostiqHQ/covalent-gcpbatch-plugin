@@ -32,7 +32,7 @@ provider "google" {
 provider "docker" {
   host = "unix:///var/run/docker.sock"
   registry_auth {
-    address  = "https://${data.google_client_config.current.region}-docker.pkg.dev"
+    address  = "https://${coalesce(data.google_client_config.current.region, var.region)}-docker.pkg.dev"
     username = "oauth2accesstoken"
     password = var.access_token
   }
@@ -41,7 +41,7 @@ provider "docker" {
 data "google_client_config" "current" {}
 
 locals {
-  executor_image_tag = join("/", [join("-", [data.google_client_config.current.region, "docker.pkg.dev"]), var.project_id, "covalent", "covalent-gcpbatch-executor"])
+  executor_image_tag = join("/", [join("-", [coalesce(data.google_client_config.current.region, var.region), "docker.pkg.dev"]), var.project_id, "covalent", "covalent-gcpbatch-executor"])
 }
 
 resource "random_string" "sasuffix" {
@@ -52,7 +52,7 @@ resource "random_string" "sasuffix" {
 
 # Create the docker artifact registry
 resource "google_artifact_registry_repository" "covalent" {
-  location      = data.google_client_config.current.region
+  location      = coalesce(data.google_client_config.current.region, var.region)
   repository_id = "covalent"
   description   = "Covalent Batch executor base images"
   format        = "DOCKER"
@@ -82,7 +82,7 @@ resource "docker_registry_image" "base_executor" {
 # Create a storage bucket
 resource "google_storage_bucket" "covalent" {
   name          = join("-", [var.prefix, "covalent", "storage", "bucket"])
-  location      = data.google_client_config.current.region
+  location      = coalesce(data.google_client_config.current.region, var.region)
   force_destroy = true
 }
 

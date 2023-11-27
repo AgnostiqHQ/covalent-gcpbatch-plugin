@@ -50,8 +50,14 @@ variable "prefix" {
   default = "covalent"
 }
 
-variable "key_path"{
-  type = string
+variable "key_path" {
+  type        = string
   description = "JSON file containing the credentials to connect to google provider"
-  default = ""
+  default     = ""
+}
+
+variable "region" {
+  type        = string
+  description = "Region to deploy the infrastructure to"
+  default     = "us-east1"
 }
