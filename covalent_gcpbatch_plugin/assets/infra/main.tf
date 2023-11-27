@@ -128,17 +128,16 @@ resource "google_project_iam_member" "storage_object_reader" {
   member  = google_service_account.covalent.member
 }
 
-data "template_file" "executor_config" {
-  template = file("${path.module}/gcpbatch.conf.tftpl")
-
-  vars = {
+locals {
+  executor_config_content = templatefile("${path.module}/gcpbatch.conf.tftpl", {
     project_id               = var.project_id
     covalent_package_version = var.covalent_package_version
     key_path                 = var.key_path
-  }
+  })
 }
 
 resource "local_file" "executor_config" {
-  content  = data.template_file.executor_config.rendered
+  content  = local.executor_config_content
   filename = "${path.module}/gcpbatch.conf"
 }
+
