@@ -53,4 +53,5 @@ variable "prefix" {
 variable "key_path"{
   type = string
   description = "JSON file containing the credentials to connect to google provider"
+  default = ""
 }
