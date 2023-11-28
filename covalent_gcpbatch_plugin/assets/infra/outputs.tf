@@ -19,7 +19,7 @@ output service_account_email {
 }
 
 output container_image_uri {
-  value = local.executor_image_tag
+  value = local.executor_image_name
 }
 
 output storage_bucket_name {
@@ -32,7 +32,7 @@ output GCPBatchExecutor {
     project_id='${local.project_id}',
     region='${local.region}',
     bucket_name='${google_storage_bucket.covalent.name}',
-    container_image_uri='${local.executor_image_tag}',
+    container_image_uri='${local.executor_image_name}',
     service_account_email='${google_service_account.covalent.email}'
   )
 EOL
