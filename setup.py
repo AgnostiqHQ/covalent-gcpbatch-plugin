@@ -103,9 +103,7 @@ def main():
     if "-e" not in sys.argv:
         # Non-editable install needs to include files to build docker image.
         created_files = _create_docker_files()
-        setup_info.update(
-            package_data={PACKAGE_NAME: ["assets/infra/docker/*"]}
-        )
+        setup_info.update(package_data={PACKAGE_NAME: ["assets/infra/docker/*"]})
 
     setup(**setup_info)
 
