@@ -20,12 +20,6 @@ variable "project_id" {
   default = "covalenttesting"
 }
 
-variable "context" {
-  type        = string
-  description = "Path to the build context. Defaults to the root directory up three levels"
-  default     = "../../.."
-}
-
 variable "prerelease" {
   type        = string
   description = "Specify if the latest pre-release version of Covalent is to be installed when building the docker container"
