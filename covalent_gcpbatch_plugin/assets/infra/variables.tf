@@ -20,13 +20,6 @@ variable "project_id" {
   default = "covalenttesting"
 }
 
-variable "access_token" {
-  type        = string
-  default     = ""
-  sensitive   = true
-  description = "Google cloud access token for authenticating to the artifact registry"
-}
-
 variable "context" {
   type        = string
   description = "Path to the build context. Defaults to the root directory up three levels"

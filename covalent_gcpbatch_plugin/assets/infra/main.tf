@@ -31,11 +31,15 @@ resource "random_string" "default_prefix" {
 
 data "google_client_config" "current" {}
 
+
 locals {
+  region     = coalesce(data.google_client_config.current.region, var.region)
+  project_id = coalesce(data.google_client_config.current.project, var.project_id)
+
   prefix   = var.prefix != "" ? var.prefix : random_string.default_prefix.result
   key_path = var.key_path != "" ? var.key_path : "${pathexpand("~")}/.config/gcloud/application_default_credentials.json"
 
-  executor_image_tag = join("/", [join("-", [coalesce(data.google_client_config.current.region, var.region), "docker.pkg.dev"]), var.project_id, "covalent", "covalent-gcpbatch-executor"])
+  executor_image_tag = join("/", [join("-", [local.region, "docker.pkg.dev"]), var.project_id, "covalent", "covalent-gcpbatch-executor"])
 
   executor_config_content = templatefile("${path.module}/gcpbatch.conf.tftpl", {
     project_id               = var.project_id
@@ -53,15 +57,14 @@ provider "google" {
 provider "docker" {
   host = "unix:///var/run/docker.sock"
   registry_auth {
-    address  = "https://${coalesce(data.google_client_config.current.region, var.region)}-docker.pkg.dev"
-    username = "oauth2accesstoken"
-    password = var.access_token
+    address     = "https://${local.region}-docker.pkg.dev"
+    config_file = pathexpand("~/.docker/config.json")
   }
 }
 
 # Create the docker artifact registry
 resource "google_artifact_registry_repository" "covalent" {
-  location      = coalesce(data.google_client_config.current.region, var.region)
+  location      = local.region
   repository_id = "covalent"
   description   = "Covalent Batch executor base images"
   format        = "DOCKER"
@@ -91,13 +94,13 @@ resource "docker_registry_image" "base_executor" {
 # Create a storage bucket
 resource "google_storage_bucket" "covalent" {
   name          = join("-", ["covalent", local.prefix, "storage", "bucket"])
-  location      = coalesce(data.google_client_config.current.region, var.region)
+  location      = local.region
   force_destroy = true
 }
 
 # Create custom service account for running the batch job
 resource "google_service_account" "covalent" {
-  account_id   = join("", ["covalent", local.prefix, "saaccount"])
+  account_id   = join("-", ["covalent", local.prefix, "saaccount"])
   display_name = "CovalentBatchExecutorServiceAccount"
 }
 

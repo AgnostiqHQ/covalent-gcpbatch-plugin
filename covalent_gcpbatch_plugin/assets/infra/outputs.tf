@@ -29,8 +29,8 @@ output storage_bucket_name {
 output GCPBatchExecutor {
   value = <<EOL
   GCPBatchExecutor(
-    project_id='${coalesce(data.google_client_config.current.project, var.project_id)}',
-    region='${coalesce(data.google_client_config.current.region, var.region)}',
+    project_id='${local.project_id}',
+    region='${local.region}',
     bucket_name='${google_storage_bucket.covalent.name}',
     container_image_uri='${local.executor_image_tag}',
     service_account_email='${google_service_account.covalent.email}'
