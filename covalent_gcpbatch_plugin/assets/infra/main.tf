@@ -33,7 +33,6 @@ data "google_client_config" "current" {}
 
 
 locals {
-
   # Try to get region from current config, otherwise use vars.
   region     = coalesce(data.google_client_config.current.region, var.region)
   project_id = coalesce(data.google_client_config.current.project, var.project_id)
@@ -41,18 +40,9 @@ locals {
   # Use random prefix if var not set.
   prefix = var.prefix != "" ? var.prefix : random_string.default_prefix.result
 
-  # Use default key path var not set.
-  key_path_default = "${pathexpand("~")}/.config/gcloud/application_default_credentials.json"
-  key_path         = var.key_path != "" ? var.key_path : local.key_path_default
-
-  # Conditional to distringuish normal versus editable plugin installs.
-  pkg_dir           = fileexists("./docker") ? "./docker" : "../../.."
-  dockerfile        = abspath("${local.pkg_dir}/Dockerfile")
-  exec_script       = abspath("${local.pkg_dir}/covalent_gcpbatch_plugin/exec.py")
-  requirements_file = abspath("${local.pkg_dir}/requirements.txt")
-
-  repository_id       = "covalent-executor-${local.prefix}"
+  # Repository and iamge configuration.
   repository_base_url = join("-", [local.region, "docker.pkg.dev"])
+  repository_id       = "covalent-executor-${local.prefix}"
 
   executor_image_name = join("/", [
     local.repository_base_url,
@@ -60,12 +50,34 @@ locals {
     local.repository_id,
     "covalent-gcpbatch-executor"
   ])
-
   executor_config_content = templatefile("${path.root}/gcpbatch.conf.tftpl", {
     covalent_package_version = var.covalent_package_version
     project_id               = local.project_id
     key_path                 = local.key_path
   })
+
+  # Use default key path if var not set.
+  key_path_default = "${pathexpand("~")}/.config/gcloud/application_default_credentials.json"
+  key_path         = var.key_path != "" ? var.key_path : local.key_path_default
+
+  # Distinguish normal versus editable (-e) plugin installs.
+  editable_install = !fileexists("./docker/Dockerfile")
+
+  # Dockerfile location. This is combined with the build context.
+  dockerfile    = local.editable_install ? "Dockerfile" : "/docker/Dockerfile"
+  build_context = local.editable_install ? "../../.." : "."
+
+  # Other file locations.
+  files_dir = local.editable_install ? "../../.." : "./docker"
+
+  # Build arguments for docker image.
+  build_args = {
+    covalent_package_version = var.covalent_package_version
+    prerelease               = var.prerelease
+    exec_script_arg          = "${abspath(local.files_dir)}/covalent_gcpbatch_plugin/exec.py"
+    requirements_file_arg    = "${abspath(local.files_dir)}/requirements.txt"
+  }
+
 }
 
 provider "google" {
@@ -94,15 +106,15 @@ resource "docker_image" "base_executor" {
   name = local.executor_image_name
 
   build {
-    context    = "."
+    context    = local.build_context
     dockerfile = local.dockerfile
     platform   = "linux/amd64"
 
     build_args = {
-      "COVALENT_PACKAGE_VERSION" : var.covalent_package_version
-      "PRE_RELEASE" : var.prerelease
-      "EXEC_SCRIPT" : local.exec_script
-      "REQUIREMENTS_FILE" : local.requirements_file
+      "COVALENT_PACKAGE_VERSION" : local.build_args.covalent_package_version
+      "PRE_RELEASE" : local.build_args.prerelease
+      "EXEC_SCRIPT" : local.build_args.exec_script_arg
+      "REQUIREMENTS_FILE" : local.build_args.requirements_file_arg
     }
     label = {
       author = "Agnostiq Inc"
@@ -168,4 +180,3 @@ resource "local_file" "executor_config" {
   content  = local.executor_config_content
   filename = "${path.module}/gcpbatch.conf"
 }
-
