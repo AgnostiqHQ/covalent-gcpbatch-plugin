@@ -76,40 +76,43 @@ setup_info = {
 }
 
 
-def _create_docker_subdir() -> Path:
+def _create_docker_files() -> Path:
     """
     Create a dir with files for docker image build from site-packages.
     """
-    base_dir = Path(".").absolute()
-    docker_dir = base_dir / f"{PACKAGE_NAME}/assets/infra/docker"
-
-    dummy_dir = docker_dir / PACKAGE_NAME
-    dummy_dir.mkdir(exist_ok=True, parents=True)
-
-    for file in [
+    base_dir = Path(__file__).parent.absolute()
+    create_files = [
         base_dir / "Dockerfile",
         base_dir / "requirements.txt",
         base_dir / f"{PACKAGE_NAME}/exec.py",
-    ]:
-        shutil.copy(file, docker_dir)
+    ]
 
-    return docker_dir
+    new_files = []
+    docker_dir = base_dir / f"{PACKAGE_NAME}/assets/infra"
+    for file in create_files:
+        shutil.copy(file, docker_dir)
+        new_files.append(docker_dir / file.name)
+
+    return new_files
 
 
 def main():
     """Install entry-point."""
-    _docker_dir = None
+    created_files = None
 
     if "-e" not in sys.argv:
         # Non-editable install needs to include files to build docker image.
-        _docker_dir = _create_docker_subdir()
-        setup_info.update(package_data={PACKAGE_NAME: ["assets/infra/docker/*"]})
+        created_files = _create_docker_files()
+        setup_info.update(
+            package_data={PACKAGE_NAME: ["assets/infra/docker/*"]}
+        )
 
     setup(**setup_info)
 
-    if _docker_dir is not None:
+    if created_files is not None:
         # Clean up sub-dir created for non-editable install.
-        shutil.rmtree(_docker_dir, ignore_errors=True)
+        for file in created_files:
+            file.unlink()
 
 
 if __name__ == "__main__":

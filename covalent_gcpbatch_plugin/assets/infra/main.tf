@@ -61,23 +61,20 @@ locals {
   key_path         = var.key_path != "" ? var.key_path : local.key_path_default
 
   # Distinguish normal versus editable (-e) plugin installs.
-  editable_install = !fileexists("./docker/Dockerfile")
+  editable_install = !fileexists("./Dockerfile")
 
-  # Dockerfile location. This is combined with the build context.
-  dockerfile    = local.editable_install ? "Dockerfile" : "/docker/Dockerfile"
-  build_context = local.editable_install ? "../../.." : "."
-
-  # Other file locations.
-  files_dir = local.editable_install ? "../../.." : "./docker"
+  # Image build context and file locations.
+  build_context = local.editable_install ? "../../.." : path.module
+  build_files   = local.build_context
 
   # Build arguments for docker image.
+  exec_script_location = local.editable_install ? "covalent_gcpbatch_plugin/exec.py" : "exec.py"
   build_args = {
     covalent_package_version = var.covalent_package_version
     prerelease               = var.prerelease
-    exec_script_arg          = "${abspath(local.files_dir)}/covalent_gcpbatch_plugin/exec.py"
-    requirements_file_arg    = "${abspath(local.files_dir)}/requirements.txt"
+    exec_script_arg          = "${local.build_files}/${local.exec_script_location}"
+    requirements_file_arg    = "${local.build_files}/requirements.txt"
   }
-
 }
 
 provider "google" {
@@ -106,9 +103,8 @@ resource "docker_image" "base_executor" {
   name = local.executor_image_name
 
   build {
-    context    = local.build_context
-    dockerfile = local.dockerfile
-    platform   = "linux/amd64"
+    context  = local.build_context
+    platform = "linux/amd64"
 
     build_args = {
       "COVALENT_PACKAGE_VERSION" : local.build_args.covalent_package_version
