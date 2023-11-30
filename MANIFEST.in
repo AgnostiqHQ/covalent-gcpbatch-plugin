@@ -1,3 +1,4 @@
 include VERSION
 include requirements.txt
 include covalent_gcpbatch_plugin/assets/infra/*
+include covalent_gcpbatch_plugin/assets/docker/*
