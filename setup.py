@@ -14,10 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import shutil
 import site
 import sys
-from pathlib import Path
 
 from setuptools import find_packages, setup
 
@@ -25,14 +23,13 @@ site.ENABLE_USER_SITE = "--user" in sys.argv[1:]
 
 # When updating, VERSION should be set to that of the latest
 # covalent-gcpbatch-plugin (ie, this package).
-with open("VERSION", "r", encoding="utf-8") as f:
+with open("VERSION") as f:
     version = f.read().strip()
 
-with open("requirements.txt", "r", encoding="utf-8") as f:
+with open("requirements.txt") as f:
     required = f.read().splitlines()
 
-PACKAGE_NAME = "covalent_gcpbatch_plugin"
-PLUGINS_LIST = [f"gcpbatch = {PACKAGE_NAME}.gcpbatch"]
+plugins_list = ["gcpbatch = covalent_gcpbatch_plugin.gcpbatch"]
 
 setup_info = {
     "name": "covalent-gcpbatch-plugin",
@@ -45,7 +42,7 @@ setup_info = {
     "author": "Agnostiq",
     "author_email": "support@agnostiq.ai",
     "description": "Covalent GCP Batch Plugin",
-    "long_description": open("README.md", "r", encoding="utf-8").read(),
+    "long_description": open("README.md").read(),
     "long_description_content_type": "text/markdown",
     "include_package_data": True,
     "install_requires": required,
@@ -71,47 +68,9 @@ setup_info = {
         "Topic :: System :: Distributed Computing",
     ],
     "entry_points": {
-        "covalent.executor.executor_plugins": PLUGINS_LIST,
+        "covalent.executor.executor_plugins": plugins_list,
     },
 }
 
-
-def _create_docker_files() -> Path:
-    """
-    Create a dir with files for docker image build from site-packages.
-    """
-    base_dir = Path(__file__).parent.absolute()
-    create_files = [
-        base_dir / "Dockerfile",
-        base_dir / "requirements.txt",
-        base_dir / f"{PACKAGE_NAME}/exec.py",
-    ]
-
-    new_files = []
-    docker_dir = base_dir / f"{PACKAGE_NAME}/assets/infra"
-    for file in create_files:
-        shutil.copy(file, docker_dir)
-        new_files.append(docker_dir / file.name)
-
-    return new_files
-
-
-def main():
-    """Install entry-point."""
-    created_files = None
-
-    if "-e" not in sys.argv:
-        # Non-editable install needs to include files to build docker image.
-        created_files = _create_docker_files()
-        setup_info.update(package_data={PACKAGE_NAME: ["assets/infra/docker/*"]})
-
-    setup(**setup_info)
-
-    if created_files is not None:
-        # Clean up sub-dir created for non-editable install.
-        for file in created_files:
-            file.unlink()
-
-
 if __name__ == "__main__":
-    main()
+    setup(**setup_info)
