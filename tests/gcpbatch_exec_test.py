@@ -62,8 +62,7 @@ def test_exec_main_raises_exception(mocker):
     mock_dict = {"EXCEPTION_FILENAME": "exception.json", "COVALENT_BUCKET_NAME": "test_bucket"}
     mocker.patch.dict("covalent_gcpbatch_plugin.assets.docker.exec.os.environ", mock_dict)
     mocker.patch(
-        "covalent_gcpbatch_plugin.assets.docker.exec.storage.Client",
-        return_value=MagicMock()
+        "covalent_gcpbatch_plugin.assets.docker.exec.storage.Client", return_value=MagicMock()
     )
     mocker.patch(
         "covalent_gcpbatch_plugin.assets.docker.exec.pickle.load",
