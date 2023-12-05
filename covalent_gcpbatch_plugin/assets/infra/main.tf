@@ -50,11 +50,6 @@ locals {
     local.repository_id,
     "covalent-gcpbatch-executor"
   ])
-  executor_config_content = templatefile("${path.root}/gcpbatch.conf.tftpl", {
-    covalent_package_version = var.covalent_package_version
-    project_id               = local.project_id
-    key_path                 = local.key_path
-  })
 
   # Use default key path if var not set.
   key_path_default = "${pathexpand("~")}/.config/gcloud/application_default_credentials.json"
@@ -112,6 +107,13 @@ resource "google_storage_bucket" "covalent" {
 }
 
 resource "local_file" "executor_config" {
-  content  = local.executor_config_content
   filename = "${path.module}/gcpbatch.conf"
+  content = templatefile("${path.module}/gcpbatch.conf.tftpl", {
+    region                   = local.region
+    key_path                 = local.key_path
+    project_id               = local.project_id
+    bucket_name              = google_storage_bucket.covalent.name
+    container_image_uri      = docker_registry_image.base_executor.name
+    covalent_package_version = var.covalent_package_version
+  })
 }
