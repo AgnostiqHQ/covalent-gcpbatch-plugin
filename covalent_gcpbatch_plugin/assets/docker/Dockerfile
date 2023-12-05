@@ -19,13 +19,12 @@ FROM ${COVALENT_BASE_IMAGE}
 
 # Install dependencies
 ARG COVALENT_TASK_ROOT=/usr/src
+
 ARG COVALENT_PACKAGE_VERSION
 ARG PRE_RELEASE
 
-COPY requirements.txt requirements.txt
-RUN apt-get update && \
-		pip install -r requirements.txt
-
+COPY requirements-image.txt requirements.txt
+RUN apt-get update && pip install -r requirements.txt
 
 RUN if [ -z "$PRE_RELEASE" ]; then \
 		pip install "$COVALENT_PACKAGE_VERSION"; else \
@@ -33,7 +32,7 @@ RUN if [ -z "$PRE_RELEASE" ]; then \
 	fi
 
 
-COPY covalent_gcpbatch_plugin/exec.py ${COVALENT_TASK_ROOT}
+COPY exec.py ${COVALENT_TASK_ROOT}
 
 WORKDIR ${COVALENT_TASK_ROOT}
 ENV PYTHONPATH ${COVALENT_TASK_ROOT}:${PYTHONPATH}

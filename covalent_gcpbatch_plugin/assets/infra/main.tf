@@ -23,122 +23,97 @@ terraform {
   }
 }
 
+resource "random_string" "default_prefix" {
+  length  = 9
+  upper   = false
+  special = false
+}
+
+data "google_client_config" "current" {}
+
+
+locals {
+  # Try to get region from current config, otherwise use vars.
+  region     = coalesce(data.google_client_config.current.region, var.region)
+  project_id = coalesce(data.google_client_config.current.project, var.project_id)
+
+  # Use random prefix if var not set.
+  prefix = var.prefix != "" ? var.prefix : random_string.default_prefix.result
+
+  # Repository and iamge configuration.
+  repository_base_url = join("-", [local.region, "docker.pkg.dev"])
+  repository_id       = "covalent-executor-${local.prefix}"
+
+  executor_image_name = join("/", [
+    local.repository_base_url,
+    local.project_id,
+    local.repository_id,
+    "covalent-gcpbatch-executor"
+  ])
+
+  # Use default key path if var not set.
+  key_path_default = "${pathexpand("~")}/.config/gcloud/application_default_credentials.json"
+  key_path         = var.key_path != "" ? var.key_path : local.key_path_default
+}
+
 provider "google" {
   project     = var.project_id
   region      = "us-east1"
-  credentials = file(var.key_path)
+  credentials = local.key_path
 }
 
 provider "docker" {
   host = "unix:///var/run/docker.sock"
   registry_auth {
-    address  = "https://${data.google_client_config.current.region}-docker.pkg.dev"
-    username = "oauth2accesstoken"
-    password = var.access_token
+    address     = "https://${local.region}-docker.pkg.dev"
+    config_file = pathexpand("~/.docker/config.json")
   }
 }
 
-data "google_client_config" "current" {}
-
-locals {
-  executor_image_tag = join("/", [join("-", [data.google_client_config.current.region, "docker.pkg.dev"]), var.project_id, "covalent", "covalent-gcpbatch-executor"])
-}
-
-resource "random_string" "sasuffix" {
-  length  = 16
-  lower   = false
-  special = false
-}
-
-# Create the docker artifact registry
 resource "google_artifact_registry_repository" "covalent" {
-  location      = data.google_client_config.current.region
-  repository_id = "covalent"
+  location      = local.region
+  repository_id = local.repository_id
   description   = "Covalent Batch executor base images"
   format        = "DOCKER"
 }
 
 
 resource "docker_image" "base_executor" {
-  name = local.executor_image_tag
+  name = local.executor_image_name
+
   build {
-    context = var.context
+    context  = "../docker"
+    platform = "linux/amd64"
+
     build_args = {
-      "PRE_RELEASE" : var.prerelease
       "COVALENT_PACKAGE_VERSION" : var.covalent_package_version
+      "PRE_RELEASE" : var.prerelease
     }
     label = {
       author = "Agnostiq Inc"
     }
-    platform = "linux/amd64"
   }
 }
 
 resource "docker_registry_image" "base_executor" {
   name          = docker_image.base_executor.name
-  keep_remotely = true
+  keep_remotely = false
 }
 
-# Create a storage bucket
 resource "google_storage_bucket" "covalent" {
-  name          = join("-", [var.prefix, "covalent", "storage", "bucket"])
-  location      = data.google_client_config.current.region
+  name          = join("-", ["covalent", "storage", local.prefix])
+  location      = local.region
   force_destroy = true
 }
 
-# Create custom service account for running the batch job
-resource "google_service_account" "covalent" {
-  account_id   = join("", [var.prefix, "covalent", "saaccount"])
-  display_name = "CovalentBatchExecutorServiceAccount"
-}
-
-resource "google_project_iam_member" "agent_reporter" {
-  project = var.project_id
-  role    = "roles/batch.agentReporter"
-  member  = google_service_account.covalent.member
-}
-
-resource "google_project_iam_member" "log_writer" {
-  project = var.project_id
-  role    = "roles/logging.logWriter"
-  member  = google_service_account.covalent.member
-}
-
-resource "google_project_iam_member" "log_viewer" {
-  project = var.project_id
-  role    = "roles/logging.viewer"
-  member  = google_service_account.covalent.member
-}
-
-resource "google_project_iam_member" "registry_writer" {
-  project = var.project_id
-  role    = "roles/artifactregistry.writer"
-  member  = google_service_account.covalent.member
-}
-
-resource "google_project_iam_member" "storage_object_creator" {
-  project = var.project_id
-  role    = "roles/storage.objectCreator"
-  member  = google_service_account.covalent.member
-}
-
-resource "google_project_iam_member" "storage_object_reader" {
-  project = var.project_id
-  role    = "roles/storage.objectViewer"
-  member  = google_service_account.covalent.member
-}
-
-data "template_file" "executor_config" {
-  template = file("${path.module}/gcpbatch.conf.tftpl")
-
-  vars = {
-    project_id               = var.project_id
-    covalent_package_version = var.covalent_package_version
-    key_path                 = var.key_path
-  }
-}
-
 resource "local_file" "executor_config" {
-  content  = data.template_file.executor_config.rendered
   filename = "${path.module}/gcpbatch.conf"
+  content = templatefile("${path.module}/gcpbatch.conf.tftpl", {
+    region                   = local.region
+    key_path                 = local.key_path
+    project_id               = local.project_id
+    bucket_name              = google_storage_bucket.covalent.name
+    container_image_uri      = docker_registry_image.base_executor.name
+    covalent_package_version = var.covalent_package_version
+  })
 }

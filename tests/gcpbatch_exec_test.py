@@ -18,7 +18,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from covalent_gcpbatch_plugin.exec import main
+from covalent_gcpbatch_plugin.assets.docker.exec import main
 
 
 def test_exec_main(mocker):
@@ -28,19 +28,21 @@ def test_exec_main(mocker):
         "RESULT_FILENAME": "result.pkl",
         "COVALENT_BUCKET_NAME": "test_bucket",
     }
-    mocker.patch.dict("covalent_gcpbatch_plugin.exec.os.environ", mock_dict)
-    mock_os_path_join = mocker.patch("covalent_gcpbatch_plugin.exec.os.path.join")
-    mocker.patch("covalent_gcpbatch_plugin.exec.storage.Client", return_value=MagicMock())
-    mock_file_open = mocker.patch("covalent_gcpbatch_plugin.exec.open")
+    mocker.patch.dict("covalent_gcpbatch_plugin.assets.docker.exec.os.environ", mock_dict)
+    mocker.patch(
+        "covalent_gcpbatch_plugin.assets.docker.exec.storage.Client",
+        return_value=MagicMock(),
+    )
+    mock_file_open = mocker.patch("covalent_gcpbatch_plugin.assets.docker.exec.open")
     mock_pickle_load = mocker.patch(
-        "covalent_gcpbatch_plugin.exec.pickle.load",
+        "covalent_gcpbatch_plugin.assets.docker.exec.pickle.load",
         return_value=(
             MagicMock(),
             MagicMock(),
             MagicMock(),
         ),
     )
-    mock_pickle_dump = mocker.patch("covalent_gcpbatch_plugin.exec.pickle.dump")
+    mock_pickle_dump = mocker.patch("covalent_gcpbatch_plugin.assets.docker.exec.pickle.dump")
 
     main()
 
@@ -49,7 +51,6 @@ def test_exec_main(mocker):
 
     mock_pickle_load.return_value[0].assert_called_once_with(*mock_args, **mock_kwargs)
 
-    assert mock_os_path_join.call_count == 2
     assert mock_file_open.call_count == 2
     mock_pickle_load.assert_called_once()
     mock_pickle_dump.assert_called_once()
@@ -57,24 +58,24 @@ def test_exec_main(mocker):
 
 def test_exec_main_raises_exception(mocker):
     """Test main raising execption while executing task"""
-    mock_json_dump = mocker.patch("covalent_gcpbatch_plugin.exec.json.dump")
+    mock_json_dump = mocker.patch("covalent_gcpbatch_plugin.assets.docker.exec.json.dump")
     mock_dict = {"EXCEPTION_FILENAME": "exception.json", "COVALENT_BUCKET_NAME": "test_bucket"}
-    mocker.patch.dict("covalent_gcpbatch_plugin.exec.os.environ", mock_dict)
-    mocker.patch("covalent_gcpbatch_plugin.exec.storage.Client", return_value=MagicMock())
-    mock_os_path_join = mocker.patch("covalent_gcpbatch_plugin.exec.os.path.join")
-    mock_file_open = mocker.patch("covalent_gcpbatch_plugin.exec.open")
-    mock_pickle_load = mocker.patch(
-        "covalent_gcpbatch_plugin.exec.pickle.load",
+    mocker.patch.dict("covalent_gcpbatch_plugin.assets.docker.exec.os.environ", mock_dict)
+    mocker.patch(
+        "covalent_gcpbatch_plugin.assets.docker.exec.storage.Client", return_value=MagicMock()
+    )
+    mocker.patch(
+        "covalent_gcpbatch_plugin.assets.docker.exec.pickle.load",
         return_value=(
             MagicMock(side_effect=Exception("error")),  # function
             MagicMock(),  # args
             MagicMock(),  # kwargs
         ),
     )
+    mock_file_open = mocker.patch("covalent_gcpbatch_plugin.assets.docker.exec.open")
 
     with pytest.raises(Exception):
         main()
 
-    mock_os_path_join.assert_called()
-    assert len(mock_file_open.mock_calls) == 6
+    assert len(mock_file_open.mock_calls) == 3
     mock_json_dump.assert_called_once()

@@ -20,19 +20,6 @@ variable "project_id" {
   default = "covalenttesting"
 }
 
-variable "access_token" {
-  type        = string
-  default     = ""
-  sensitive   = true
-  description = "Google cloud access token for authenticating to the artifact registry"
-}
-
-variable "context" {
-  type        = string
-  description = "Path to the build context. Defaults to the root directory up three levels"
-  default     = "../../.."
-}
-
 variable "prerelease" {
   type        = string
   description = "Specify if the latest pre-release version of Covalent is to be installed when building the docker container"
@@ -47,11 +34,18 @@ variable "covalent_package_version" {
 
 variable "prefix" {
   type    = string
-  default = "covalent"
+  default = ""
 }
 
-variable "key_path"{
-  type = string
+
+variable "key_path" {
+  type        = string
   description = "JSON file containing the credentials to connect to google provider"
-  default = ""
+  default     = ""
+}
+
+variable "region" {
+  type        = string
+  description = "Region to deploy the infrastructure to"
+  default     = "us-east1"
 }
