@@ -111,49 +111,6 @@ resource "google_storage_bucket" "covalent" {
   force_destroy = true
 }
 
-resource "google_service_account" "covalent" {
-  account_id   = join("-", ["covalent", "sa", local.prefix])
-  display_name = "CovalentBatchExecutorServiceAccount"
-  description  = "Service account created by Covalent deployment"
-  project      = local.project_id
-}
-
-resource "google_project_iam_member" "agent_reporter" {
-  project = local.project_id
-  role    = "roles/batch.agentReporter"
-  member  = google_service_account.covalent.member
-}
-
-resource "google_project_iam_member" "log_writer" {
-  project = local.project_id
-  role    = "roles/logging.logWriter"
-  member  = google_service_account.covalent.member
-}
-
-resource "google_project_iam_member" "log_viewer" {
-  project = local.project_id
-  role    = "roles/logging.viewer"
-  member  = google_service_account.covalent.member
-}
-
-resource "google_project_iam_member" "registry_writer" {
-  project = local.project_id
-  role    = "roles/artifactregistry.writer"
-  member  = google_service_account.covalent.member
-}
-
-resource "google_project_iam_member" "storage_object_creator" {
-  project = local.project_id
-  role    = "roles/storage.objectCreator"
-  member  = google_service_account.covalent.member
-}
-
-resource "google_project_iam_member" "storage_object_reader" {
-  project = local.project_id
-  role    = "roles/storage.objectViewer"
-  member  = google_service_account.covalent.member
-}
-
 resource "local_file" "executor_config" {
   content  = local.executor_config_content
   filename = "${path.module}/gcpbatch.conf"
