@@ -53,6 +53,8 @@ def test_executor_explicit_constructor(mocker):
         service_account_email="test-email",
         region="test-region",
         vcpus=2,
+        num_gpus=1,
+        gpu_type="nvidia-tesla-a100",
         memory=256,
         time_limit=300,
         poll_freq=2,
@@ -66,6 +68,8 @@ def test_executor_explicit_constructor(mocker):
     assert test_executor.service_account_email == "test-email"
     assert test_executor.region == "test-region"
     assert test_executor.vcpus == 2
+    assert test_executor.num_gpus == 1
+    assert test_executor.gpu_type == "nvidia-tesla-a100"
     assert test_executor.memory == 256
     assert test_executor.time_limit == 300
     assert test_executor.poll_freq == 2
@@ -80,7 +84,7 @@ def test_executor_default_constructor(mocker):
     """
     mock_get_config = mocker.patch("covalent_gcpbatch_plugin.gcpbatch.get_config")
     GCPBatchExecutor()
-    assert mock_get_config.call_count == 11
+    assert mock_get_config.call_count == 13
 
 
 def test_get_batch_service_client(gcpbatch_executor, mocker):
@@ -277,7 +281,8 @@ async def test_create_batch_job(gcpbatch_executor, mocker):
         task_count=1, task_spec=mock_batch_v1.TaskSpec.return_value
     )
     mock_batch_v1.AllocationPolicy.assert_called_once_with(
-        service_account={"email": gcpbatch_executor.service_account_email}
+        instances=[mock_batch_v1.AllocationPolicy.InstancePolicyOrTemplate.return_value],
+        service_account={"email": gcpbatch_executor.service_account_email},
     )
     mock_batch_v1.LogsPolicy.assert_called_once_with(destination="CLOUD_LOGGING")
     mock_batch_v1.Job.assert_called_once_with(

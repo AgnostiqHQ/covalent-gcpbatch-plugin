@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Changed
+
+- Add support for launching jobs on instances with GPUs
+
 ## [0.14.0] - 2023-12-05
 
 ### Authors
