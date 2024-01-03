@@ -1,5 +1,4 @@
 include VERSION
 include requirements.txt
-include covalent_gcpbatch_plugin/assets/infra/main.tf
-include covalent_gcpbatch_plugin/assets/infra/variables.tf
-include covalent_gcpbatch_plugin/assets/infra/outputs.tf
+include covalent_gcpbatch_plugin/assets/infra/*
+include covalent_gcpbatch_plugin/assets/docker/*

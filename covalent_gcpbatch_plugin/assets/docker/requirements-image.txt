@@ -14,26 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output service_account_email {
-  value = google_service_account.covalent.email
-}
+# Mirror plugin dependencies.
 
-output container_image_uri {
-  value = local.executor_image_name
-}
+covalent>=0.218.0,<1
+google-cloud-batch==0.9.0
+google-cloud-storage==2.7.0
 
-output storage_bucket_name {
-  value = google_storage_bucket.covalent.name
-}
-
-output GCPBatchExecutor {
-  value = <<EOL
-  GCPBatchExecutor(
-    project_id='${local.project_id}',
-    region='${local.region}',
-    bucket_name='${google_storage_bucket.covalent.name}',
-    container_image_uri='${local.executor_image_name}',
-    service_account_email='${google_service_account.covalent.email}'
-  )
-EOL
-}
+# This file is copied into the docker image during `covalent deploy up`

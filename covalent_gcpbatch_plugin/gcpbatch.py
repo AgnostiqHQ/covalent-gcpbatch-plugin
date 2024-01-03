@@ -56,8 +56,9 @@ class ExecutorInfraDefaults(BaseModel):
     Executor configuration values for deploying infrastructure
     """
 
-    prefix: str
-    project_id: str
+    prefix: str = ""
+    project_id: str = "covalenttesting"
+    access_token: str = ""
     vcpus: Optional[int] = 2
     num_gpus: Optional[int] = 0
     gpu_type: Optional[str] = ""
@@ -66,6 +67,7 @@ class ExecutorInfraDefaults(BaseModel):
     poll_freq: Optional[int] = 5
     retries: Optional[int] = 3
     cache_dir: Optional[str] = "/tmp/covalent"
+    key_path: str
 
 
 _EXECUTOR_PLUGIN_DEFAULTS = ExecutorPluginDefaults().dict()

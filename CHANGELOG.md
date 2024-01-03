@@ -11,6 +11,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add support for launching jobs on instances with GPUs
 
+## [0.14.0] - 2023-12-05
+
+### Authors
+
+- Ara Ghukasyan <38226926+araghukas@users.noreply.github.com>
+- Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+
+### Changed
+
+- terraform scripts to require no variables
+
+## [0.13.0] - 2023-11-27
+
+### Authors
+
+- mpvgithub <107603631+mpvgithub@users.noreply.github.com>
+- Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+
+
+### Fix
+
+- Added `key_path` & `access_token` to ExecutorInfraDefaults to accept arguments from **deploy** command
+
+### Added
+
+- Added tftpl file to main.tf to generate conf for GCP batch plugin
+
+### Changed
+
+- Modified the `key_path` variable to have a default value
+
+## [0.12.0] - 2023-11-21
+
+### Authors
+
+- mpvgithub <107603631+mpvgithub@users.noreply.github.com>
+
+
+### Changed
+
+- Changed the default value for `project_id` & `prefix`
+
+### Added
+
+- Added a variable to fetch the Json key path to connect to google provider
+- Added credentials attribute to google provider section via JSON key path
+
 ## [0.11.0] - 2023-09-21
 
 ### Authors
