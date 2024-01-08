@@ -64,6 +64,7 @@ class ExecutorInfraDefaults(BaseModel):
     retries: Optional[int] = 3
     cache_dir: Optional[str] = "/tmp/covalent"
     key_path: str
+    covalent_package_version: str = ""
 
 
 _EXECUTOR_PLUGIN_DEFAULTS = ExecutorPluginDefaults().dict()

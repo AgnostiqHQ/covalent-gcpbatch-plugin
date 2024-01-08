@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Changed
+
+- No longer using `PRE_RELEASE` variable, instead switched to directly specifying the covalent version number to install. This was required to support its passing in the new `covalent deploy` command.
+
+### Added
+
+- `covalent_package_version` can now be specified directly from the `covalent deploy` command.
+
 ## [0.14.0] - 2023-12-05
 
 ### Authors
