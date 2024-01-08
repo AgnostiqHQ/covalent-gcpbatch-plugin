@@ -28,8 +28,8 @@ variable "prerelease" {
 
 variable "covalent_package_version" {
   type        = string
-  description = "Covalent version to be installed in the container"
-  default     = "covalent"
+  description = "Covalent version to be installed in the container, if not specified the latest stable version will be installed"
+  default     = ""
 }
 
 variable "prefix" {

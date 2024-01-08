@@ -21,15 +21,26 @@ FROM ${COVALENT_BASE_IMAGE}
 ARG COVALENT_TASK_ROOT=/usr/src
 
 ARG COVALENT_PACKAGE_VERSION
+
+# Not used anymore for now
 ARG PRE_RELEASE
 
 COPY requirements-image.txt requirements.txt
 RUN apt-get update && pip install -r requirements.txt
 
-RUN if [ -z "$PRE_RELEASE" ]; then \
-		pip install "$COVALENT_PACKAGE_VERSION"; else \
-		pip install --pre "$COVALENT_PACKAGE_VERSION"; \
+# Commenting this out for now as we switch to specifying the package version directly
+# RUN if [ -z "$PRE_RELEASE" ]; then \
+# 		pip install "$COVALENT_PACKAGE_VERSION"; else \
+# 		pip install --pre "$COVALENT_PACKAGE_VERSION"; \
+# 	fi
+
+RUN if [ -z "$COVALENT_PACKAGE_VERSION" ]; then \
+		pip install covalent; else \
+		pip install "covalent==$COVALENT_PACKAGE_VERSION"; \
 	fi
+
+# Making sure the right version of cloudpickle is installed after covalent
+RUN pip install "cloudpickle>2, <3"
 
 
 COPY exec.py ${COVALENT_TASK_ROOT}
