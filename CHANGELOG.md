@@ -14,7 +14,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `covalent_package_version` can now be specified directly from the `covalent deploy` command.
-- `cloudpickle` version to be installed in the docker image will be less then 3 since it is not reverse compatible with ~2 for now.
 
 ## [0.14.0] - 2023-12-05
 
