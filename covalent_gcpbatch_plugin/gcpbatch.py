@@ -67,7 +67,7 @@ class ExecutorInfraDefaults(BaseModel):
     covalent_package_version: str = ""
 
 
-_EXECUTOR_PLUGIN_DEFAULTS = ExecutorPluginDefaults().dict()
+_EXECUTOR_PLUGIN_DEFAULTS = ExecutorPluginDefaults().model_dump()
 
 
 MOUNT_PATH = "/mnt/disks/covalent"
